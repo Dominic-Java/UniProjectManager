@@ -14,18 +14,18 @@ class HomeService
 
         return [
             'title' => 'UniProjectManager',
-            'subtitle' => 'Dashboard — management proiecte studențești',
+            'subtitle' => 'Dashboard - management proiecte studentesti',
             'quick_actions' => [
-                ['label' => 'Creează proiect', 'href' => '/projects/create'],
+                ['label' => 'Creeaza proiect', 'href' => '/projects/create'],
                 ['label' => 'Vezi proiecte', 'href' => '/projects'],
                 ['label' => 'Echipe', 'href' => '/teams'],
                 ['label' => 'Livrabile', 'href' => '/deliverables'],
             ],
             'stats' => $stats,
             'announcements' => [
-                'Adaugă primul proiect și definește etapele.',
-                'Creează echipe și asociază studenții.',
-                'Încarcă livrabile și oferă feedback.',
+                'Adauga primul proiect si defineste etapele.',
+                'Creeaza echipe si asociaza studentii.',
+                'Incarca livrabile si ofera feedback.',
             ],
         ];
     }

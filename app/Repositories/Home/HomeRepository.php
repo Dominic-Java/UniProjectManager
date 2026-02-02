@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Schema;
 final class HomeRepository
 {
     /**
-     * Returnează statistici de bază pentru pagina Home.
-     * Verifică existența tabelelor pentru a evita erori la prima rulare.
+     * Returneaza statistici de baza pentru pagina Home.
+     * Verifica existenta tabelelor pentru a evita erori la prima rulare.
      */
     public function getStats(): array
     {
@@ -23,7 +23,7 @@ final class HomeRepository
     }
 
     /**
-     * Numără înregistrările dintr-un tabel doar dacă acesta există.
+     * Numara inregistrarile dintr-un tabel doar daca acesta exista.
      */
     private function countIfExists(string $table): int
     {

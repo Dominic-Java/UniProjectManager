@@ -1,0 +1,247 @@
+Mai jos ai explicația completă (tehnic + “cum circulă datele”) pentru aplicația ta Laravel, inclusiv **relațiile dintre fișiere** și legătura cu DB. O poți pune direct în documentația de licență / prezentare.
+
+---
+
+## 1) Ce este aplicația și cum e structurată
+
+Aplicația este un proiect **Laravel (MVC)**. Laravel împarte codul pe responsabilități:
+
+* **Routes**: “harta” URL-urilor (ce pagină / acțiune răspunde la un URL)
+* **Controllers**: puncte de intrare pentru logica unei funcționalități
+* **Views (Blade)**: interfața (HTML) afișată în browser
+* **Models (Eloquent ORM)**: reprezentarea tabelelor DB ca obiecte
+* **Migrations / Seeders**: crearea structurii DB și date inițiale
+* **Config + .env**: setări aplicație și conexiunea la DB
+
+În stadiul actual (din ce ai lucrat azi):
+
+* Ai rute în `routes/web.php`
+* Ai view nou: `resources/views/dashboard.blade.php`
+* Home-ul e controlat de `App\Http\Controllers\Web\HomeController@index`
+
+---
+
+## 2) Data flow complet: Browser → Laravel → DB → Browser
+
+### 2.1 Cerere de la utilizator (Browser)
+
+Utilizatorul:
+
+* intră pe o pagină: `GET /dashboard`
+* apasă un buton: ex. “Creează proiect” → `GET /projects/create`
+
+Browserul trimite request HTTP către server.
+
+---
+
+### 2.2 Entry point (public/index.php)
+
+În Laravel, orice request web intră prin:
+
+* `public/index.php`
+
+Acesta:
+
+1. încarcă autoloader-ul Composer
+2. pornește aplicația Laravel
+3. trimite request-ul către “kernel” și apoi către router
+
+> Asta e motivul pentru care, în Laragon, URL corect este de obicei:
+> `http://localhost/UniProjectManager/public/...`
+> dacă nu ai VirtualHost setat pe `public`.
+
+---
+
+### 2.3 Routing (routes/web.php)
+
+Fișierul:
+
+* `routes/web.php`
+
+Este “tabla de rutare”: decide **ce cod se execută** pentru un URL.
+
+În cazul tău:
+
+* `/` → `HomeController@index`
+* `/dashboard` → returnează view-ul `dashboard`
+* `/projects`, `/projects/create`, `/teams`, `/deliverables`, `/settings` → rute temporare (placeholder) ca să nu dea 404 și să funcționeze navigarea din dashboard
+
+**Legătură directă:**
+`Request URL + Method` → ruta potrivită → controller/closure → răspuns
+
+---
+
+### 2.4 Controller (HomeController)
+
+Fișierul:
+
+* `app/Http/Controllers/Web/HomeController.php`
+
+Controller-ul:
+
+* primește request
+* pregătește date
+* returnează view sau redirect
+
+Ex:
+`HomeController@index` (pentru `/`) probabil face:
+
+* `return view('home')` (sau ceva similar)
+
+**Legătură:**
+`Route` → `Controller@method` → `view(...)`
+
+---
+
+### 2.5 View (Blade template)
+
+Fișierul:
+
+* `resources/views/dashboard.blade.php`
+
+Acesta este HTML + Blade directives.
+
+Dashboard-ul tău afișează un card “Acțiuni rapide” și butoane care trimit utilizatorul către rutele definite în `web.php` folosind `route('...')`.
+
+**Legătură:**
+`Controller/Route` → `return view('dashboard')` → Blade render → HTML → Browser
+
+---
+
+### 2.6 Legătura cu DB (când o activezi)
+
+În momentul de față dashboard-ul e static (doar UI + navigare). Când îl legi la DB, fluxul devine:
+
+1. Route: `GET /dashboard`
+2. Controller: `DashboardController@index`
+3. Model: `Project`, `Team`, `Deliverable` etc.
+4. ORM generează SQL și interoghează DB
+5. Datele se întorc în controller
+6. Controller trimite datele în view:
+
+   * `return view('dashboard', ['projectsCount' => $count])`
+7. Blade afișează datele
+
+**Legătură:**
+`Controller` → `Model` → `DB` → `Model` → `Controller` → `View`
+
+---
+
+## 3) Relațiile dintre fișiere (diagramă logică)
+
+### Pentru `/dashboard`
+
+* Browser: `GET /dashboard`
+* `public/index.php` → boot Laravel
+* `routes/web.php` găsește ruta `/dashboard`
+* execută:
+
+  * `return view('dashboard')`
+* `resources/views/dashboard.blade.php` se randează în HTML
+* HTML se trimite înapoi browserului
+
+### Pentru butonul “Creează proiect”
+
+* Browser: `GET /projects/create`
+* `routes/web.php` găsește ruta `projects.create`
+* momentan returnează text “TODO: Creează proiect”
+* ulterior va fi:
+
+  * `ProjectController@create` → `view('projects.create')`
+
+---
+
+## 4) Ce rol are fiecare folder important (pe scurt, dar complet)
+
+* `routes/`
+
+  * definește endpoint-urile (URL → handler)
+* `app/Http/Controllers/`
+
+  * logica de request/response (orchestrare)
+* `resources/views/`
+
+  * UI (Blade templates)
+* `app/Models/`
+
+  * modele Eloquent (mapare tabel)
+* `database/migrations/`
+
+  * schema DB (create/alter tables)
+* `database/seeders/`
+
+  * date inițiale (roluri, user demo etc.)
+* `.env`
+
+  * config (DB, mail, app key)
+* `config/database.php`
+
+  * configurarea conexiunii DB (citește `.env`)
+* `public/`
+
+  * entry point + fișiere publice (build assets)
+
+---
+
+## 5) Cum ar arăta fluxul complet cu DB (exemplu real)
+
+### Exemplu: “Vezi proiecte” (listare)
+
+**Target final:**
+`GET /projects` ar afișa lista proiectelor din DB.
+
+1. Browser: `GET /projects`
+2. Route: `Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');`
+3. Controller: `ProjectController@index`
+4. Model: `Project::query()->latest()->get()`
+5. DB: `SELECT * FROM projects ORDER BY created_at DESC;`
+6. Controller: `return view('projects.index', ['projects' => $projects]);`
+7. View: `resources/views/projects/index.blade.php` face loop și afișează.
+
+---
+
+## 6) Relațiile cu DB (cum le gândești corect pentru UniProjectManager)
+
+Într-o aplicație de management proiecte studențești, tipic ai:
+
+* `users` (student / coordonator / admin)
+* `projects`
+* `teams`
+* `team_members` (pivot)
+* `deliverables`
+* `tasks` (opțional)
+* `project_applications` / `reservations` (opțional)
+
+Relații tipice (Eloquent):
+
+* `User hasMany Projects` (dacă user e creator/coordonator)
+* `Project belongsTo User`
+* `Project belongsToMany Users` (membrii echipei) prin pivot `team_members`
+* `Project hasMany Deliverables`
+* `Deliverable belongsTo Project`
+
+Asta dictează:
+
+* ce FK-uri pui în migrations
+* ce relații scrii în modele
+
+---
+
+## 7) De ce ai avut 404 inițial și de ce acum nu mai ai
+
+* 404 apărea pentru că butonul trimitea la o rută `projects.create` care **nu era definită** în `routes/web.php`.
+* după ce ai adăugat rutele placeholder, `route:list` și navigarea funcționează.
+
+---
+
+## 8) “Pe românește”: cum circulă datele
+
+* Rutele sunt “ușile” aplicației.
+* Controller-ul e “receptionerul”: primește cererea și decide ce se întâmplă.
+* Modelul e “interfața cu baza de date”: cere datele și le întoarce.
+* View-ul e “ecranul”: afișează datele.
+
+---
+
+Dacă îmi dai **schema DB / tabelul principal** (sau doar îmi spui ce tabele ai deja: `users`, `projects`, etc.), îți adaptez această explicație cu **numele reale** ale fișierelor tale și îți fac și un mini-diagramă exactă:
+`Route → Controller → Model → Tabel DB → View` pentru fiecare modul (Projects / Teams / Deliverables).
