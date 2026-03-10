@@ -11,6 +11,21 @@ class HomeController extends Controller
 
     public function index()
     {
-        return view('home.index', $this->homeService->getHomeData());
+        $user = auth()->user();
+
+        if ($user && $user->hasRole('admin', 'profesor')) {
+            return view('home.index', $this->homeService->getHomeData());
+        }
+
+        return view('home.student', $this->homeService->getStudentHomeData());
+    }
+
+    public function landing()
+    {
+        if (auth()->check()) {
+            return redirect()->route('dashboard');
+        }
+
+        return view('home.landing', ['title' => 'UniProjectManager']);
     }
 }

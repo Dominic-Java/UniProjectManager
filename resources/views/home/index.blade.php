@@ -32,7 +32,9 @@
                 @foreach($quick_actions as $a)
                     <a class="btn btn-primary" href="{{ $a['href'] }}">{{ $a['label'] }}</a>
                 @endforeach
-                <a class="btn btn-secondary" href="{{ route('settings.index') }}">Setari</a>
+                @if(auth()->user()?->hasRole('admin'))
+                    <a class="btn btn-secondary" href="{{ route('settings.index') }}">Setari</a>
+                @endif
             </div>
             <p class="muted">(Link-urile devin active pe masura ce implementam modulele.)</p>
         </div>

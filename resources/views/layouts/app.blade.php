@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'UniProjectManager' }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -58,6 +59,7 @@
             transition: all 0.2s ease;
         }
         .menu a:hover { color: var(--ink); background: rgba(37, 99, 235, 0.12); }
+        .menu form { margin: 0; }
         .hero {
             padding: 30px 0 16px;
         }
@@ -107,6 +109,7 @@
         }
         .btn-primary { background: var(--accent); color: #fff; }
         .btn-secondary { background: #e2e8f0; color: var(--ink); }
+        .btn-danger { background: #dc2626; color: #fff; }
         .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 16px rgba(37, 99, 235, 0.18); }
         .table {
             width: 100%;
@@ -117,7 +120,22 @@
         .table th { color: var(--muted); font-weight: 700; font-size: 12px; text-transform: uppercase; }
         .notice { padding: 12px 14px; border-radius: 12px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
         .success { background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46; }
+        .error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
         .muted { color: var(--muted); font-size: 13px; }
+        .input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            font: inherit;
+        }
+        .label {
+            display: block;
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
         .span-4 { grid-column: span 4; }
         .span-5 { grid-column: span 5; }
         .span-6 { grid-column: span 6; }
@@ -138,13 +156,31 @@
 <body>
 <header>
     <div class="wrap nav">
-        <div class="brand">UniProjectManager</div>
+        <a class="brand" href="{{ route('landing') }}">UniProjectManager</a>
         <nav class="menu">
-            <a href="{{ route('home') }}">Home</a>
-            <a href="{{ route('projects.index') }}">Proiecte</a>
-            <a href="{{ route('teams.index') }}">Echipe</a>
-            <a href="{{ route('deliverables.index') }}">Livrabile</a>
-            <a href="{{ route('settings.index') }}">Setari</a>
+            @auth
+                <a href="{{ route('dashboard') }}">Home</a>
+                <a href="{{ route('projects.index') }}">Proiecte</a>
+                @if(auth()->user()?->hasRole('admin', 'profesor'))
+                    <a href="{{ route('projects.create') }}">Creeaza proiect</a>
+                @endif
+                <a href="{{ route('teams.index') }}">Echipe</a>
+                <a href="{{ route('deliverables.index') }}">Livrabile</a>
+                <a href="{{ route('milestones.index') }}">Milestones</a>
+                <a href="{{ route('profile.edit') }}">Profil</a>
+                @if(auth()->user()?->hasRole('admin'))
+                    <a href="{{ route('settings.index') }}">Setari</a>
+                @endif
+                <span class="pill">{{ auth()->user()->name }} ({{ auth()->user()->role }})</span>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" class="btn btn-danger">Logout</button>
+                </form>
+            @endauth
+            @guest
+                <a href="{{ route('login') }}">Login</a>
+                <a href="{{ route('register') }}">Register</a>
+            @endguest
         </nav>
     </div>
 </header>

@@ -22,13 +22,19 @@ final class ProjectsRepository
 
         $columns = $this->availableColumns('projects', [
             'id',
+            'code',
             'title',
-            'name',
             'description',
+            'domain',
             'status',
+            'visibility',
+            'min_team_size',
+            'max_team_size',
             'start_date',
             'end_date',
+            'created_by',
             'created_at',
+            'updated_at',
         ]);
 
         $query = DB::table('projects');

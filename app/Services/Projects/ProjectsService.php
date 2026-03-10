@@ -20,14 +20,24 @@ class ProjectsService
         ];
     }
 
-    public function createProject(array $data): array
+    public function createProject(array $data, ?int $userId): array
     {
+        if (!$userId) {
+            return ['ok' => false, 'message' => 'Nu am putut identifica utilizatorul curent.'];
+        }
+
         $payload = [
+            'code' => $data['code'] ?? null,
             'title' => $data['title'] ?? null,
-            'description' => $data['description'] ?? null,
+            'description' => $data['description'] ?? '',
+            'domain' => $data['domain'] ?? null,
+            'visibility' => $data['visibility'] ?? 'public',
             'start_date' => $data['start_date'] ?? null,
             'end_date' => $data['end_date'] ?? null,
             'status' => $data['status'] ?? 'draft',
+            'min_team_size' => $data['min_team_size'] ?? 1,
+            'max_team_size' => $data['max_team_size'] ?? 4,
+            'created_by' => $userId,
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
         ];
@@ -41,6 +51,8 @@ class ProjectsService
         foreach ($rows as $row) {
             $title = $row->title ?? $row->name ?? null;
             $normalized[] = [
+                'id' => $row->id ?? null,
+                'code' => $row->code ?? null,
                 'title' => $title ?: 'Proiect',
                 'status' => $row->status ?? 'n/a',
                 'start_date' => $row->start_date ?? null,

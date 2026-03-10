@@ -30,6 +30,7 @@
                         <th>Start</th>
                         <th>End</th>
                         <th>Creat</th>
+                        <th>Actiuni</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -40,6 +41,19 @@
                             <td>{{ $project['start_date'] ?? '-' }}</td>
                             <td>{{ $project['end_date'] ?? '-' }}</td>
                             <td>{{ $project['created_at'] ?? '-' }}</td>
+                            <td>
+                                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                    <a class="btn btn-secondary" href="{{ route('projects.show', $project['id']) }}">Detalii</a>
+                                    @if(auth()->user()?->hasRole('admin', 'profesor'))
+                                        <a class="btn btn-secondary" href="{{ route('projects.edit', $project['id']) }}">Editeaza</a>
+                                        <form method="POST" action="{{ route('projects.destroy', $project['id']) }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-danger" onclick="return confirm('Stergi proiectul?')">Sterge</button>
+                                        </form>
+                                    @endif
+                                </div>
+                            </td>
                         </tr>
                     @endforeach
                     </tbody>
@@ -50,7 +64,13 @@
         <div class="card span-4">
             <h3>Actiuni</h3>
             <p class="muted">Creeaza proiecte si urmareste starea lor.</p>
-            <a class="btn btn-primary" href="{{ route('projects.create') }}">Creeaza proiect</a>
+            @if(auth()->user()?->hasRole('admin', 'profesor'))
+                <a class="btn btn-primary" href="{{ route('projects.create') }}">Creeaza proiect</a>
+            @else
+                <div class="notice">
+                    Doar rolurile admin/profesor pot crea proiecte.
+                </div>
+            @endif
         </div>
     </section>
 @endsection
