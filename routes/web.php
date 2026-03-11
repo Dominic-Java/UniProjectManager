@@ -42,20 +42,20 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/projects', [ProjectsController::class, 'index'])->name('projects.index');
     Route::get('/projects/create', [ProjectsController::class, 'create'])
-        ->middleware('role:admin,profesor')
+        ->middleware('role:profesor')
         ->name('projects.create');
     Route::post('/projects', [ProjectsController::class, 'store'])
-        ->middleware('role:admin,profesor')
+        ->middleware('role:profesor')
         ->name('projects.store');
     Route::get('/projects/{project}', [ProjectsController::class, 'show'])->name('projects.show');
     Route::get('/projects/{project}/edit', [ProjectsController::class, 'edit'])
-        ->middleware('role:admin,profesor')
+        ->middleware('role:profesor')
         ->name('projects.edit');
     Route::put('/projects/{project}', [ProjectsController::class, 'update'])
-        ->middleware('role:admin,profesor')
+        ->middleware('role:profesor')
         ->name('projects.update');
     Route::delete('/projects/{project}', [ProjectsController::class, 'destroy'])
-        ->middleware('role:admin,profesor')
+        ->middleware('role:profesor')
         ->name('projects.destroy');
 
     Route::get('/teams', [TeamsController::class, 'index'])->name('teams.index');
@@ -95,9 +95,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/milestones/{milestone}', [MilestonesController::class, 'update'])->name('milestones.update');
     Route::delete('/milestones/{milestone}', [MilestonesController::class, 'destroy'])->name('milestones.destroy');
     Route::get('/settings', [SettingsController::class, 'index'])
-        ->middleware('role:admin')
+        ->middleware('role:profesor')
         ->name('settings.index');
     Route::put('/settings/users/{user}', [SettingsController::class, 'updateUserRole'])
-        ->middleware('role:admin')
+        ->middleware('role:profesor')
         ->name('settings.users.update');
 });

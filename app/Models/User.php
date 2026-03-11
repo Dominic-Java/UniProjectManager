@@ -23,6 +23,8 @@ class User extends Authenticatable
         'password_hash',
         'first_name',
         'last_name',
+        'birth_day',
+        'birth_month',
         'birth_year',
         'gender',
         'city',
@@ -32,6 +34,9 @@ class User extends Authenticatable
         'bio',
         'is_active',
         'last_login_at',
+        'email_verified_at',
+        'email_verification_token',
+        'email_verification_expires_at',
     ];
 
     /**
@@ -42,6 +47,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password_hash',
         'remember_token',
+        'email_verification_token',
     ];
 
     /**
@@ -55,7 +61,11 @@ class User extends Authenticatable
             'password_hash' => 'hashed',
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
+            'birth_day' => 'integer',
+            'birth_month' => 'integer',
             'birth_year' => 'integer',
+            'email_verified_at' => 'datetime',
+            'email_verification_expires_at' => 'datetime',
         ];
     }
 
@@ -76,11 +86,6 @@ class User extends Authenticatable
     public function hasRole(string ...$roles): bool
     {
         return in_array($this->role, $roles, true);
-    }
-
-    public function isAdmin(): bool
-    {
-        return $this->role === 'admin';
     }
 
     public function projectsCreated()

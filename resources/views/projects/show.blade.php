@@ -50,7 +50,7 @@
         <div class="card span-4">
             <h3>Actiuni</h3>
             <div style="display:flex;flex-direction:column;gap:8px;">
-                @if(auth()->user()?->hasRole('admin', 'profesor'))
+                @if(auth()->user()?->hasRole('profesor'))
                     <a class="btn btn-secondary" href="{{ route('projects.edit', $project) }}">Editeaza proiect</a>
                 @endif
                 <a class="btn btn-secondary" href="{{ route('projects.index') }}">Inapoi la lista</a>

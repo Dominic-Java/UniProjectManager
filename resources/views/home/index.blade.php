@@ -2,28 +2,45 @@
 
 @section('content')
     <section class="hero">
-        <div class="pill">Dashboard</div>
+        <div class="pill">Profesor</div>
         <h1>{{ $subtitle }}</h1>
-        <p>O vedere de ansamblu asupra proiectelor, echipelor si livrabilelor.</p>
+        <p>Coordoneaza proiectele studentesti, stabileste livrabilele si urmareste progresul echipelor.</p>
     </section>
 
     <section class="grid">
-        <div class="card span-4">
-            <div class="muted">Proiecte</div>
-            <div style="font-size:28px;font-weight:800;margin-top:6px;">{{ $stats['projects'] }}</div>
-            <div class="muted">Total proiecte inregistrate</div>
+        <div class="card span-8" style="background:linear-gradient(120deg,#ffffff 0%, #eef6ff 55%, #f5f3ff 100%);">
+            <h3>Stare generala</h3>
+            <p class="muted">Ai o vedere rapida asupra proiectelor si livrabilelor active.</p>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;">
+                <div class="card" style="padding:14px 16px;">
+                    <div class="muted">Proiecte</div>
+                    <div style="font-size:26px;font-weight:800;margin-top:6px;">{{ $stats['projects'] }}</div>
+                    <div class="muted">Total proiecte</div>
+                </div>
+                <div class="card" style="padding:14px 16px;">
+                    <div class="muted">Echipe</div>
+                    <div style="font-size:26px;font-weight:800;margin-top:6px;">{{ $stats['teams'] }}</div>
+                    <div class="muted">Echipe inregistrate</div>
+                </div>
+                <div class="card" style="padding:14px 16px;">
+                    <div class="muted">Livrabile</div>
+                    <div style="font-size:26px;font-weight:800;margin-top:6px;">{{ $stats['deliverables'] }}</div>
+                    <div class="muted">Deadline-uri active</div>
+                </div>
+            </div>
         </div>
 
         <div class="card span-4">
-            <div class="muted">Echipe</div>
-            <div style="font-size:28px;font-weight:800;margin-top:6px;">{{ $stats['teams'] }}</div>
-            <div class="muted">Echipe active/inregistrate</div>
-        </div>
-
-        <div class="card span-4">
-            <div class="muted">Livrabile</div>
-            <div style="font-size:28px;font-weight:800;margin-top:6px;">{{ $stats['deliverables'] }}</div>
-            <div class="muted">Fisiere/etape incarcate</div>
+            <h3>Tip cont</h3>
+            <p class="muted">Rolul tau este <strong>Profesor</strong>.</p>
+            <div class="notice" style="margin-top:10px;">
+                Domenii publice acceptate: 
+                <strong>{{ implode(', ', config('uniprojectmanager.student_domains', [])) ?: 'neconfigurat' }}</strong>
+            </div>
+            <p class="muted" style="margin-top:8px;">
+                Domenii institutionale: <strong>{{ implode(', ', config('uniprojectmanager.institutional_domains', [])) ?: 'neconfigurat' }}</strong>
+            </p>
+            <p class="muted">Poti permite si prin whitelist de email.</p>
         </div>
 
         <div class="card span-7">
@@ -32,11 +49,11 @@
                 @foreach($quick_actions as $a)
                     <a class="btn btn-primary" href="{{ $a['href'] }}">{{ $a['label'] }}</a>
                 @endforeach
-                @if(auth()->user()?->hasRole('admin'))
-                    <a class="btn btn-secondary" href="{{ route('settings.index') }}">Setari</a>
+                @if(auth()->user()?->hasRole('profesor'))
+                    <a class="btn btn-secondary" href="{{ route('settings.index') }}">Setari utilizatori</a>
                 @endif
             </div>
-            <p class="muted">(Link-urile devin active pe masura ce implementam modulele.)</p>
+            <p class="muted" style="margin-top:10px;">Recomandat: creeaza proiecte si seteaza milestones.</p>
         </div>
 
         <div class="card span-5">
@@ -50,9 +67,9 @@
         </div>
 
         <div class="card span-12" style="background:#0f172a;color:#e2e8f0;">
-            <strong>Data flow (implementat):</strong>
+            <strong>Flux recomandat:</strong>
             <div style="margin-top:8px;">
-                <code>/</code> -&gt; <code>routes</code> -&gt; <code>HomeController</code> -&gt; <code>HomeService</code> -&gt; <code>HomeRepository</code> -&gt; <code>DB</code> -&gt; <code>view</code>
+                Configureaza proiecte &rarr; seteaza livrabile &rarr; monitorizeaza echipele &rarr; ofera feedback.
             </div>
         </div>
     </section>

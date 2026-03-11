@@ -39,7 +39,7 @@
                             <td>
                                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                                     <a class="btn btn-secondary" href="{{ route('teams.show', $team) }}">Detalii</a>
-                                    @if(auth()->user()?->hasRole('admin', 'profesor') || $team->created_by === auth()->id())
+                                    @if(auth()->user()?->hasRole('profesor') || $team->created_by === auth()->id())
                                         <a class="btn btn-secondary" href="{{ route('teams.edit', $team) }}">Editeaza</a>
                                         <form method="POST" action="{{ route('teams.destroy', $team) }}">
                                             @csrf

@@ -14,9 +14,14 @@
                     {{ session('success') }}
                 </div>
             @endif
+            @if (session('error'))
+                <div class="notice error" style="margin-bottom:12px;">
+                    {{ session('error') }}
+                </div>
+            @endif
             @if ($errors->any())
                 <div class="notice error" style="margin-bottom:12px;">
-                    Datele de autentificare nu sunt corecte.
+                    {{ $errors->first() }}
                 </div>
             @endif
 
@@ -30,7 +35,18 @@
 
                 <div style="margin-bottom:12px;">
                     <label class="label" for="password">Parola</label>
-                    <input class="input" id="password" type="password" name="password" required>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <input class="input" id="password" type="password" name="password" required>
+                        <button type="button" class="btn btn-outline btn-sm" data-toggle-password="password">Afiseaza</button>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:12px;">
+                    <label class="label" for="role">Tip cont</label>
+                    <select class="input" id="role" name="role" required>
+                        <option value="student" @selected(old('role', 'student') === 'student')>Student</option>
+                        <option value="profesor" @selected(old('role', 'student') === 'profesor')>Profesor</option>
+                    </select>
                 </div>
 
                 <button type="submit" class="btn btn-primary">Intra in cont</button>

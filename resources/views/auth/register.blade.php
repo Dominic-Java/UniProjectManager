@@ -41,12 +41,26 @@
                 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
                     <div>
                         <label class="label" for="password">Parola</label>
-                        <input class="input" id="password" type="password" name="password" required>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input class="input" id="password" type="password" name="password" required>
+                            <button type="button" class="btn btn-outline btn-sm" data-toggle-password="password">Afiseaza</button>
+                        </div>
                     </div>
                     <div>
                         <label class="label" for="password_confirmation">Confirmare parola</label>
-                        <input class="input" id="password_confirmation" type="password" name="password_confirmation" required>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input class="input" id="password_confirmation" type="password" name="password_confirmation" required>
+                            <button type="button" class="btn btn-outline btn-sm" data-toggle-password="password_confirmation">Afiseaza</button>
+                        </div>
                     </div>
+                </div>
+
+                <div style="margin-top:12px;">
+                    <label class="label" for="role">Tip cont</label>
+                    <select class="input" id="role" name="role" required>
+                        <option value="student" @selected(old('role', 'student') === 'student')>Student</option>
+                        <option value="profesor" @selected(old('role', 'student') === 'profesor')>Profesor</option>
+                    </select>
                 </div>
 
                 <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
@@ -58,8 +72,8 @@
 
         <div class="card span-4">
             <h3>Acces</h3>
-            <p class="muted">Rolul este setat implicit la Student si poate fi modificat doar de un administrator.</p>
-            <p class="muted">Sunt acceptate domenii: gmail.com, yahoo.com, outlook.com, gmx.com, hotmail.com.</p>
+            <p class="muted">Studentii si profesorii se pot inregistra cu emailuri publice si institutionale.</p>
+            <p class="muted">Institutional: {{ implode(', ', config('uniprojectmanager.institutional_domains', [])) ?: 'neconfigurat' }}.</p>
         </div>
     </section>
 @endsection

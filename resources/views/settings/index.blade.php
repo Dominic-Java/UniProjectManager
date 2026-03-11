@@ -4,10 +4,41 @@
     <section class="hero">
         <div class="pill">Setari</div>
         <h1>Configurare aplicatie</h1>
-        <p>Administrare utilizatori si roluri.</p>
+        <p>Administrare utilizatori si roluri (profesor/student).</p>
     </section>
 
     <section class="grid">
+        <div class="card span-12">
+            <h3>Reguli autorizare cont</h3>
+            <p class="muted">Profesorii sunt acceptati pe baza domeniilor/whitelist configurate in `.env`.</p>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px;">
+                <div class="card" style="padding:14px 16px;">
+                    <div class="muted">Domenii profesori</div>
+                    <div style="font-weight:700;margin-top:6px;">
+                        {{ implode(', ', config('uniprojectmanager.professor_domains', [])) ?: 'neconfigurat' }}
+                    </div>
+                </div>
+                <div class="card" style="padding:14px 16px;">
+                    <div class="muted">Whitelist profesori</div>
+                    <div style="font-weight:700;margin-top:6px;">
+                        {{ implode(', ', config('uniprojectmanager.professor_emails', [])) ?: 'neconfigurat' }}
+                    </div>
+                </div>
+                <div class="card" style="padding:14px 16px;">
+                    <div class="muted">Domenii institutionale</div>
+                    <div style="font-weight:700;margin-top:6px;">
+                        {{ implode(', ', config('uniprojectmanager.institutional_domains', [])) ?: 'neconfigurat' }}
+                    </div>
+                </div>
+                <div class="card" style="padding:14px 16px;">
+                    <div class="muted">Domenii studenti</div>
+                    <div style="font-weight:700;margin-top:6px;">
+                        {{ implode(', ', config('uniprojectmanager.student_domains', [])) ?: 'neconfigurat' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="card span-12">
             <h3>Utilizatori</h3>
             @if (session('success'))
@@ -38,7 +69,6 @@
                                     <select name="role" class="input" style="width:160px;">
                                         <option value="student" @selected($user->role === 'student')>Student</option>
                                         <option value="profesor" @selected($user->role === 'profesor')>Profesor</option>
-                                        <option value="admin" @selected($user->role === 'admin')>Admin</option>
                                     </select>
                                     <button type="submit" class="btn btn-secondary">Salveaza</button>
                                 </div>

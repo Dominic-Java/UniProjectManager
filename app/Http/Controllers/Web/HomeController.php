@@ -13,7 +13,7 @@ class HomeController extends Controller
     {
         $user = auth()->user();
 
-        if ($user && $user->hasRole('admin', 'profesor')) {
+        if ($user && $user->hasRole('profesor')) {
             return view('home.index', $this->homeService->getHomeData());
         }
 

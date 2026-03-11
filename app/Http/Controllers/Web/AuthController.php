@@ -9,7 +9,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 use App\Services\Security\AuditLogger;
 
@@ -25,19 +24,34 @@ class AuthController extends Controller
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
+            'role' => ['required', 'in:student,profesor'],
         ]);
 
-        $remember = false;
+        $email = strtolower($credentials['email']);
+        $user = User::where('email', $email)->first();
 
-        if (!Auth::attempt($credentials, $remember)) {
+        if (!$user || !Hash::check($credentials['password'], $user->password_hash)) {
             return back()
-                ->withInput($request->only('email'))
+                ->withInput($request->only('email', 'role'))
                 ->withErrors(['email' => 'Credentiale invalide.']);
         }
 
+        if ($user->role !== $credentials['role']) {
+            return back()
+                ->withInput($request->only('email', 'role'))
+                ->withErrors(['email' => 'Rolul selectat nu corespunde contului.']);
+        }
+
+        if (!$user->is_active) {
+            return back()
+                ->withInput($request->only('email', 'role'))
+                ->withErrors(['email' => 'Contul este dezactivat.']);
+        }
+
+        Auth::login($user);
         $request->session()->regenerate();
-        $request->user()?->update(['last_login_at' => now()]);
-        AuditLogger::log('auth.login', $request->user(), 'user', $request->user()?->id);
+        $user->update(['last_login_at' => now()]);
+        AuditLogger::log('auth.login', $user, 'user', $user->id);
 
         return redirect()->intended(route('dashboard'));
     }
@@ -52,9 +66,17 @@ class AuthController extends Controller
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', 'max:255', $this->allowedEmailDomainRule()],
+            'email' => ['required', 'email', 'max:255'],
             'password' => ['required', 'confirmed', 'min:8'],
+            'role' => ['required', 'in:student,profesor'],
         ]);
+
+        $validated['email'] = strtolower($validated['email']);
+        if (!$this->isEmailAllowedForRole($validated['email'], $validated['role'])) {
+            return back()
+                ->withInput($request->except(['password', 'password_confirmation']))
+                ->withErrors(['email' => $this->roleEmailErrorMessage($validated['role'])]);
+        }
 
         $existing = User::where('email', $validated['email'])->first();
         if ($existing) {
@@ -74,11 +96,11 @@ class AuthController extends Controller
             'last_name' => $validated['last_name'],
             'email' => $validated['email'],
             'password_hash' => Hash::make($validated['password']),
-            'role' => 'student',
+            'role' => $validated['role'],
         ]);
         Auth::login($user);
         $request->session()->regenerate();
-        AuditLogger::log('auth.register', $user, 'user', $user->id);
+        AuditLogger::log('auth.register', $user, 'user', $user->id, ['role' => $user->role]);
 
         return redirect()->route('dashboard');
     }
@@ -174,22 +196,50 @@ class AuthController extends Controller
         return redirect()->route('login')->with('success', 'Parola a fost resetata. Te poti autentifica.');
     }
 
-    private function allowedEmailDomainRule(): \Closure
-    {
-        $allowed = [
-            'gmail.com',
-            'yahoo.com',
-            'outlook.com',
-            'gmx.com',
-            'hotmail.com',
-        ];
 
-        return function (string $attribute, mixed $value, \Closure $fail) use ($allowed): void {
-            $parts = explode('@', strtolower((string) $value));
-            $domain = $parts[1] ?? '';
-            if ($domain === '' || !in_array($domain, $allowed, true)) {
-                $fail('Emailul trebuie sa fie dintr-un domeniu valid (gmail, yahoo, outlook, gmx, hotmail).');
+    private function isEmailAllowedForRole(string $email, string $role): bool
+    {
+        $email = strtolower($email);
+        $domain = explode('@', $email)[1] ?? '';
+
+        if ($role === 'profesor') {
+            $allowedEmails = array_map('strtolower', config('uniprojectmanager.professor_emails', []));
+            if (in_array($email, $allowedEmails, true)) {
+                return true;
             }
-        };
+
+            $allowedDomains = array_merge(
+                config('uniprojectmanager.student_domains', []),
+                config('uniprojectmanager.institutional_domains', []),
+                config('uniprojectmanager.professor_domains', [])
+            );
+            $allowedDomains = array_values(array_unique(array_map('strtolower', $allowedDomains)));
+
+            if (empty($allowedDomains)) {
+                return false;
+            }
+
+            return $domain !== '' && in_array($domain, $allowedDomains, true);
+        }
+
+        $studentDomains = array_merge(
+            config('uniprojectmanager.student_domains', []),
+            config('uniprojectmanager.institutional_domains', [])
+        );
+        $studentDomains = array_values(array_unique(array_map('strtolower', $studentDomains)));
+        if (empty($studentDomains)) {
+            return true;
+        }
+
+        return $domain !== '' && in_array($domain, $studentDomains, true);
+    }
+
+    private function roleEmailErrorMessage(string $role): string
+    {
+        if ($role === 'profesor') {
+            return 'Emailul nu este autorizat pentru cont de profesor.';
+        }
+
+        return 'Emailul trebuie sa fie dintr-un domeniu valid pentru studenti.';
     }
 }

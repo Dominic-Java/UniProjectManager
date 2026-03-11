@@ -12,7 +12,7 @@ class SettingsController extends Controller
 {
     public function index()
     {
-        abort_unless(auth()->user()?->isAdmin(), 403);
+        abort_unless(auth()->user()?->hasRole('profesor'), 403);
 
         return view('settings.index', [
             'title' => 'Setari',
@@ -22,14 +22,14 @@ class SettingsController extends Controller
 
     public function updateUserRole(Request $request, User $user): RedirectResponse
     {
-        abort_unless(auth()->user()?->isAdmin(), 403);
+        abort_unless(auth()->user()?->hasRole('profesor'), 403);
 
         $validated = $request->validate([
-            'role' => ['required', 'in:admin,profesor,student'],
+            'role' => ['required', 'in:profesor,student'],
         ]);
 
-        if ($user->id === $request->user()->id && $validated['role'] !== 'admin') {
-            return back()->withErrors(['role' => 'Nu poti elimina rolul de admin pentru contul tau.']);
+        if ($user->id === $request->user()->id && $validated['role'] !== 'profesor') {
+            return back()->withErrors(['role' => 'Nu poti elimina rolul de profesor pentru contul tau.']);
         }
 
         $user->update(['role' => $validated['role']]);

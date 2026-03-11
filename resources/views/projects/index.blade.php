@@ -44,7 +44,7 @@
                             <td>
                                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                                     <a class="btn btn-secondary" href="{{ route('projects.show', $project['id']) }}">Detalii</a>
-                                    @if(auth()->user()?->hasRole('admin', 'profesor'))
+                                    @if(auth()->user()?->hasRole('profesor'))
                                         <a class="btn btn-secondary" href="{{ route('projects.edit', $project['id']) }}">Editeaza</a>
                                         <form method="POST" action="{{ route('projects.destroy', $project['id']) }}">
                                             @csrf
@@ -64,11 +64,11 @@
         <div class="card span-4">
             <h3>Actiuni</h3>
             <p class="muted">Creeaza proiecte si urmareste starea lor.</p>
-            @if(auth()->user()?->hasRole('admin', 'profesor'))
+            @if(auth()->user()?->hasRole('profesor'))
                 <a class="btn btn-primary" href="{{ route('projects.create') }}">Creeaza proiect</a>
             @else
                 <div class="notice">
-                    Doar rolurile admin/profesor pot crea proiecte.
+                    Doar profesorii pot crea proiecte.
                 </div>
             @endif
         </div>

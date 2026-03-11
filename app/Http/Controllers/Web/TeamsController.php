@@ -300,7 +300,7 @@ class TeamsController extends Controller
             return false;
         }
 
-        if ($user->hasRole('admin', 'profesor')) {
+        if ($user->hasRole('profesor')) {
             return true;
         }
 

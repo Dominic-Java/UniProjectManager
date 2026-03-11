@@ -20,7 +20,7 @@ class HomeService
             ['label' => 'Livrabile', 'href' => '/deliverables'],
         ];
 
-        if ($user && $user->hasRole('admin', 'profesor')) {
+        if ($user && $user->hasRole('profesor')) {
             array_unshift($quickActions, ['label' => 'Creeaza proiect', 'href' => '/projects/create']);
         }
 

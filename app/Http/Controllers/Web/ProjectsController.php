@@ -20,14 +20,14 @@ class ProjectsController extends Controller
 
     public function create()
     {
-        abort_unless(auth()->user()?->hasRole('admin', 'profesor'), 403);
+        abort_unless(auth()->user()?->hasRole('profesor'), 403);
 
         return view('projects.create', ['title' => 'Creeaza proiect']);
     }
 
     public function store(Request $request)
     {
-        abort_unless(auth()->user()?->hasRole('admin', 'profesor'), 403);
+        abort_unless(auth()->user()?->hasRole('profesor'), 403);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -67,7 +67,7 @@ class ProjectsController extends Controller
 
     public function edit(Project $project)
     {
-        abort_unless(auth()->user()?->hasRole('admin', 'profesor'), 403);
+        abort_unless(auth()->user()?->hasRole('profesor'), 403);
 
         return view('projects.edit', [
             'title' => 'Editeaza proiect',
@@ -77,7 +77,7 @@ class ProjectsController extends Controller
 
     public function update(Request $request, Project $project)
     {
-        abort_unless(auth()->user()?->hasRole('admin', 'profesor'), 403);
+        abort_unless(auth()->user()?->hasRole('profesor'), 403);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -100,7 +100,7 @@ class ProjectsController extends Controller
 
     public function destroy(Project $project)
     {
-        abort_unless(auth()->user()?->hasRole('admin', 'profesor'), 403);
+        abort_unless(auth()->user()?->hasRole('profesor'), 403);
 
         $projectId = $project->id;
         $project->delete();
