@@ -100,4 +100,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/settings/users/{user}', [SettingsController::class, 'updateUserRole'])
         ->middleware('role:profesor')
         ->name('settings.users.update');
+    Route::delete('/settings/users/{user}', [SettingsController::class, 'destroy'])
+        ->middleware('role:profesor')
+        ->name('settings.users.destroy');
 });

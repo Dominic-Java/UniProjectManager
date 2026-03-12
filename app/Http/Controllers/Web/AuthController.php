@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use App\Services\Security\AuditLogger;
 
@@ -97,6 +98,7 @@ class AuthController extends Controller
             'email' => $validated['email'],
             'password_hash' => Hash::make($validated['password']),
             'role' => $validated['role'],
+            'member_code' => User::generateMemberCode($validated['role']),
         ]);
         Auth::login($user);
         $request->session()->regenerate();

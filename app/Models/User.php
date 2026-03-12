@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
@@ -20,6 +21,7 @@ class User extends Authenticatable
     protected $fillable = [
         'email',
         'role',
+        'member_code',
         'password_hash',
         'first_name',
         'last_name',
@@ -86,6 +88,17 @@ class User extends Authenticatable
     public function hasRole(string ...$roles): bool
     {
         return in_array($this->role, $roles, true);
+    }
+
+    public static function generateMemberCode(string $role): string
+    {
+        $prefix = $role === 'profesor' ? 'PROF' : 'STU';
+
+        do {
+            $code = $prefix . '-' . Str::upper(Str::random(6));
+        } while (self::where('member_code', $code)->exists());
+
+        return $code;
     }
 
     public function projectsCreated()

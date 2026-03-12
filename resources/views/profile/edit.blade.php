@@ -129,6 +129,8 @@
             <h3>Cont</h3>
             <p class="muted">Emailul este legat de autentificare.</p>
             <div class="notice">{{ $user->email }}</div>
+            <p class="muted" style="margin-top:10px;">ID utilizator</p>
+            <div class="notice">{{ $user->member_code ?? '-' }}</div>
             <p class="muted" style="margin-top:10px;">Rol cont</p>
             <div class="pill" style="margin-top:6px;">{{ ucfirst($user->role) }}</div>
         </div>

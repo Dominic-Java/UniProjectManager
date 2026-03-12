@@ -51,14 +51,17 @@
             <table class="table">
                 <thead>
                 <tr>
+                    <th>ID</th>
                     <th>Nume</th>
                     <th>Email</th>
                     <th>Rol</th>
+                    <th>Actiuni</th>
                 </tr>
                 </thead>
                 <tbody>
                 @foreach($users as $user)
                     <tr>
+                        <td>{{ $user->member_code ?? '-' }}</td>
                         <td>{{ $user->name }}</td>
                         <td>{{ $user->email }}</td>
                         <td>
@@ -73,6 +76,18 @@
                                     <button type="submit" class="btn btn-secondary">Salveaza</button>
                                 </div>
                             </form>
+                        </td>
+                        <td>
+                            @if($user->id === auth()->id())
+                                <span class="muted">cont curent</span>
+                            @else
+                                <form method="POST" action="{{ route('settings.users.destroy', $user) }}">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-danger"
+                                            onclick="return confirm('Stergi utilizatorul?')">Sterge</button>
+                                </form>
+                            @endif
                         </td>
                     </tr>
                 @endforeach
