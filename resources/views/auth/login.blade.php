@@ -58,8 +58,7 @@
 
         <div class="card span-6">
             <h3>Cont nou?</h3>
-            <p class="muted">Daca nu ai cont, creeaza unul acum.</p>
-            <a href="{{ route('register') }}" class="btn btn-secondary">Mergi la inregistrare</a>
+            <p class="muted">Conturile sunt create doar de administrator. Contacteaza profesorul coordonator pentru acces.</p>
         </div>
     </section>
 @endsection

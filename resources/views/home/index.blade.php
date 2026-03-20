@@ -49,7 +49,7 @@
                 @foreach($quick_actions as $a)
                     <a class="btn btn-primary" href="{{ $a['href'] }}">{{ $a['label'] }}</a>
                 @endforeach
-                @if(auth()->user()?->hasRole('profesor'))
+                @if(auth()->user()?->isAdmin())
                     <a class="btn btn-secondary" href="{{ route('settings.index') }}">Setari utilizatori</a>
                 @endif
             </div>

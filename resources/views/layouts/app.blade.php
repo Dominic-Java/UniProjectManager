@@ -181,7 +181,7 @@
                 <a href="{{ route('deliverables.index') }}">Livrabile</a>
                 <a href="{{ route('milestones.index') }}">Milestones</a>
                 <a href="{{ route('profile.edit') }}">Profil</a>
-                @if(auth()->user()?->hasRole('profesor'))
+                @if(auth()->user()?->isAdmin())
                     <a href="{{ route('settings.index') }}">Setari</a>
                 @endif
                 <span class="pill">{{ auth()->user()->name }} ({{ auth()->user()->role }})</span>
@@ -193,7 +193,6 @@
             @guest
                 <div class="nav-cta">
                     <a class="btn btn-outline btn-sm" href="{{ route('login') }}">Login</a>
-                    <a class="btn btn-primary btn-sm" href="{{ route('register') }}">Register</a>
                 </div>
             @endguest
         </nav>

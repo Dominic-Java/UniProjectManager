@@ -27,6 +27,8 @@ class DeliverablesController extends Controller
 
     public function create(): View
     {
+        abort_unless(auth()->user()?->hasRole('profesor'), 403);
+
         return view('deliverables.create', [
             'title' => 'Creeaza livrabil',
             'projects' => Project::orderByDesc('created_at')->get(),
@@ -36,6 +38,8 @@ class DeliverablesController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        abort_unless($request->user()?->hasRole('profesor'), 403);
+
         $validated = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
             'milestone_id' => ['nullable', 'exists:milestones,id'],
@@ -81,6 +85,8 @@ class DeliverablesController extends Controller
 
     public function edit(Deliverable $deliverable): View
     {
+        abort_unless(auth()->user()?->hasRole('profesor'), 403);
+
         return view('deliverables.edit', [
             'title' => 'Editeaza livrabil',
             'deliverable' => $deliverable,
@@ -91,6 +97,8 @@ class DeliverablesController extends Controller
 
     public function update(Request $request, Deliverable $deliverable): RedirectResponse
     {
+        abort_unless($request->user()?->hasRole('profesor'), 403);
+
         $validated = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
             'milestone_id' => ['nullable', 'exists:milestones,id'],
@@ -125,6 +133,8 @@ class DeliverablesController extends Controller
 
     public function destroy(Deliverable $deliverable): RedirectResponse
     {
+        abort_unless(request()->user()?->hasRole('profesor'), 403);
+
         $deliverableId = $deliverable->id;
         $deliverable->delete();
         AuditLogger::log('deliverables.delete', request()->user(), 'deliverable', $deliverableId);

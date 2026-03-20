@@ -6,4 +6,5 @@ return [
     'student_domains' => array_values(array_filter(array_map('trim', explode(',', env('STUDENT_EMAIL_DOMAINS', 'gmail.com,yahoo.com,outlook.com,gmx.com,hotmail.com'))))),
     'professor_domains' => array_values(array_filter(array_map('trim', explode(',', env('PROFESSOR_EMAIL_DOMAINS', ''))))),
     'professor_emails' => array_values(array_filter(array_map('trim', explode(',', env('PROFESSOR_EMAIL_WHITELIST', ''))))),
+    'admin_emails' => array_values(array_filter(array_map('trim', explode(',', env('ADMIN_EMAILS', ''))))),
 ];

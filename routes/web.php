@@ -23,8 +23,6 @@ Route::get('/', [HomeController::class, 'landing'])->name('landing');
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1')->name('login.submit');
-    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1')->name('register.submit');
     Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('password.request');
     Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->middleware('throttle:5,1')->name('password.email');
     Route::get('/reset-password', [AuthController::class, 'showResetPassword'])->name('password.reset');
@@ -80,12 +78,22 @@ Route::middleware('auth')->group(function () {
         ->name('teams.members.add');
     Route::delete('/teams/{team}/members/{user}', [TeamsController::class, 'removeMember'])->name('teams.members.remove');
     Route::get('/deliverables', [DeliverablesController::class, 'index'])->name('deliverables.index');
-    Route::get('/deliverables/create', [DeliverablesController::class, 'create'])->name('deliverables.create');
-    Route::post('/deliverables', [DeliverablesController::class, 'store'])->name('deliverables.store');
+    Route::get('/deliverables/create', [DeliverablesController::class, 'create'])
+        ->middleware('role:profesor')
+        ->name('deliverables.create');
+    Route::post('/deliverables', [DeliverablesController::class, 'store'])
+        ->middleware('role:profesor')
+        ->name('deliverables.store');
     Route::get('/deliverables/{deliverable}', [DeliverablesController::class, 'show'])->name('deliverables.show');
-    Route::get('/deliverables/{deliverable}/edit', [DeliverablesController::class, 'edit'])->name('deliverables.edit');
-    Route::put('/deliverables/{deliverable}', [DeliverablesController::class, 'update'])->name('deliverables.update');
-    Route::delete('/deliverables/{deliverable}', [DeliverablesController::class, 'destroy'])->name('deliverables.destroy');
+    Route::get('/deliverables/{deliverable}/edit', [DeliverablesController::class, 'edit'])
+        ->middleware('role:profesor')
+        ->name('deliverables.edit');
+    Route::put('/deliverables/{deliverable}', [DeliverablesController::class, 'update'])
+        ->middleware('role:profesor')
+        ->name('deliverables.update');
+    Route::delete('/deliverables/{deliverable}', [DeliverablesController::class, 'destroy'])
+        ->middleware('role:profesor')
+        ->name('deliverables.destroy');
 
     Route::get('/milestones', [MilestonesController::class, 'index'])->name('milestones.index');
     Route::get('/milestones/create', [MilestonesController::class, 'create'])->name('milestones.create');
@@ -97,6 +105,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings', [SettingsController::class, 'index'])
         ->middleware('role:profesor')
         ->name('settings.index');
+    Route::post('/settings/users', [SettingsController::class, 'store'])
+        ->middleware('role:profesor')
+        ->name('settings.users.store');
     Route::put('/settings/users/{user}', [SettingsController::class, 'updateUserRole'])
         ->middleware('role:profesor')
         ->name('settings.users.update');

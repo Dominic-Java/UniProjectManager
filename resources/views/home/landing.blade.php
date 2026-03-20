@@ -111,7 +111,7 @@
             </div>
             <div class="landing-actions">
                 <a class="btn btn-primary" href="{{ route('login') }}">Autentificare</a>
-                <a class="btn btn-secondary" href="{{ route('register') }}">Creeaza cont</a>
+                <span class="muted" style="align-self:center;">Conturile sunt create de administrator.</span>
             </div>
         </div>
         <div class="landing-side">
@@ -173,9 +173,9 @@
             <div class="cta">
                 <div>
                     <h3 style="margin:0 0 6px;">Vrei un demo pentru facultatea ta?</h3>
-                    <p style="margin:0;color:#cbd5f5;">Creeaza un cont si incepe sa structurezi proiectele din acest semestru.</p>
+                    <p style="margin:0;color:#cbd5f5;">Solicita acces de la administratorul platformei.</p>
                 </div>
-                <a class="btn btn-secondary" href="{{ route('register') }}">Creeaza cont</a>
+                <a class="btn btn-secondary" href="{{ route('login') }}">Autentificare</a>
             </div>
         </div>
     </section>

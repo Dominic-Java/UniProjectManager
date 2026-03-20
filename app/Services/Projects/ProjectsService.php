@@ -57,9 +57,22 @@ class ProjectsService
                 'status' => $row->status ?? 'n/a',
                 'start_date' => $row->start_date ?? null,
                 'end_date' => $row->end_date ?? null,
-                'created_at' => $row->created_at ?? null,
+                'created_at' => $this->formatDateTime($row->created_at ?? null),
             ];
         }
         return $normalized;
+    }
+
+    private function formatDateTime(?string $value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->format('d.m.Y H:i');
+        } catch (\Throwable $e) {
+            return $value;
+        }
     }
 }

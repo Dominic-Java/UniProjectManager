@@ -46,7 +46,9 @@
         <div class="card span-4">
             <h3>Actiuni</h3>
             <div style="display:flex;flex-direction:column;gap:8px;">
-                <a class="btn btn-secondary" href="{{ route('deliverables.edit', $deliverable) }}">Editeaza</a>
+                @if(auth()->user()?->hasRole('profesor'))
+                    <a class="btn btn-secondary" href="{{ route('deliverables.edit', $deliverable) }}">Editeaza</a>
+                @endif
                 <a class="btn btn-secondary" href="{{ route('deliverables.index') }}">Inapoi</a>
             </div>
         </div>

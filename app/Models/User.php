@@ -90,6 +90,16 @@ class User extends Authenticatable
         return in_array($this->role, $roles, true);
     }
 
+    public function isAdmin(): bool
+    {
+        $admins = array_map('strtolower', config('uniprojectmanager.admin_emails', []));
+        if (empty($admins)) {
+            return false;
+        }
+
+        return in_array(strtolower((string) $this->email), $admins, true);
+    }
+
     public static function generateMemberCode(string $role): string
     {
         $prefix = $role === 'profesor' ? 'PROF' : 'STU';

@@ -4,7 +4,7 @@
     <section class="hero">
         <div class="pill">Livrabile</div>
         <h1>Lista livrabile</h1>
-        <p>Administreaza livrabilele si deadline-urile.</p>
+        <p>Profesorii administreaza livrabilele, studentii le urmaresc.</p>
     </section>
 
     <section class="grid">
@@ -39,12 +39,14 @@
                             <td>
                                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                                     <a class="btn btn-secondary" href="{{ route('deliverables.show', $del) }}">Detalii</a>
-                                    <a class="btn btn-secondary" href="{{ route('deliverables.edit', $del) }}">Editeaza</a>
-                                    <form method="POST" action="{{ route('deliverables.destroy', $del) }}">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-danger" onclick="return confirm('Stergi livrabilul?')">Sterge</button>
-                                    </form>
+                                    @if(auth()->user()?->hasRole('profesor'))
+                                        <a class="btn btn-secondary" href="{{ route('deliverables.edit', $del) }}">Editeaza</a>
+                                        <form method="POST" action="{{ route('deliverables.destroy', $del) }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-danger" onclick="return confirm('Stergi livrabilul?')">Sterge</button>
+                                        </form>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -56,8 +58,12 @@
 
         <div class="card span-4">
             <h3>Actiuni</h3>
-            <p class="muted">Creeaza un livrabil nou pentru proiect.</p>
-            <a class="btn btn-primary" href="{{ route('deliverables.create') }}">Creeaza livrabil</a>
+            @if(auth()->user()?->hasRole('profesor'))
+                <p class="muted">Creeaza un livrabil nou pentru proiect.</p>
+                <a class="btn btn-primary" href="{{ route('deliverables.create') }}">Creeaza livrabil</a>
+            @else
+                <p class="muted">Studentii pot doar consulta livrabilele.</p>
+            @endif
         </div>
     </section>
 @endsection

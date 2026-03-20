@@ -8,12 +8,13 @@ use App\Services\Security\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class SettingsController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        abort_unless(auth()->user()?->hasRole('profesor'), 403);
+        abort_unless($request->user()?->isAdmin(), 403);
 
         return view('settings.index', [
             'title' => 'Setari',
@@ -21,9 +22,40 @@ class SettingsController extends Controller
         ]);
     }
 
+    public function store(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $validated = $request->validate([
+            'first_name' => ['required', 'string', 'max:100'],
+            'last_name' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'confirmed', 'min:8'],
+            'role' => ['required', 'in:profesor,student'],
+        ]);
+
+        $validated['email'] = strtolower($validated['email']);
+
+        $user = User::create([
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'email' => $validated['email'],
+            'password_hash' => Hash::make($validated['password']),
+            'role' => $validated['role'],
+            'member_code' => User::generateMemberCode($validated['role']),
+            'is_active' => true,
+        ]);
+
+        AuditLogger::log('users.create', $request->user(), 'user', $user->id, [
+            'role' => $user->role,
+        ]);
+
+        return back()->with('success', 'Contul a fost creat.');
+    }
+
     public function updateUserRole(Request $request, User $user): RedirectResponse
     {
-        abort_unless(auth()->user()?->hasRole('profesor'), 403);
+        abort_unless($request->user()?->isAdmin(), 403);
 
         $validated = $request->validate([
             'role' => ['required', 'in:profesor,student'],
@@ -43,7 +75,7 @@ class SettingsController extends Controller
 
     public function destroy(Request $request, User $user): RedirectResponse
     {
-        abort_unless(auth()->user()?->hasRole('profesor'), 403);
+        abort_unless($request->user()?->isAdmin(), 403);
 
         if ($user->id === $request->user()->id) {
             return back()->withErrors(['user' => 'Nu poti sterge propriul cont.']);
