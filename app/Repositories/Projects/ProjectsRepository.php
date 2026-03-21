@@ -32,6 +32,7 @@ final class ProjectsRepository
             'max_team_size',
             'start_date',
             'end_date',
+            'deadline_at',
             'created_by',
             'created_at',
             'updated_at',
@@ -67,9 +68,19 @@ final class ProjectsRepository
             $data[$column] = $payload[$column] ?? null;
         }
 
-        DB::table('projects')->insert($data);
+        $projectId = null;
 
-        return ['ok' => true, 'message' => 'Proiect salvat cu succes.'];
+        if (Schema::hasColumn('projects', 'id')) {
+            $projectId = (int) DB::table('projects')->insertGetId($data);
+        } else {
+            DB::table('projects')->insert($data);
+        }
+
+        return [
+            'ok' => true,
+            'message' => 'Proiect salvat cu succes.',
+            'project_id' => $projectId,
+        ];
     }
 
     private function availableColumns(string $table, array $candidates): array

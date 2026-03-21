@@ -9,6 +9,9 @@
 
     <section class="grid">
         <div class="card span-8">
+            @if (session('error'))
+                <div class="notice error" style="margin-bottom:12px;">{{ session('error') }}</div>
+            @endif
             @if ($errors->any())
                 <div class="notice error" style="margin-bottom:12px;">{{ $errors->first() }}</div>
             @endif

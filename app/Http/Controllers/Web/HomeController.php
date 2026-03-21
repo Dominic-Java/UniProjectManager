@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Services\Home\HomeService;
+use Illuminate\Http\Request;
 
 class HomeController extends Controller
 {
@@ -20,12 +21,18 @@ class HomeController extends Controller
         return view('home.student', $this->homeService->getStudentHomeData());
     }
 
-    public function landing()
+    public function landing(Request $request)
     {
         if (auth()->check()) {
             return redirect()->route('dashboard');
         }
 
-        return view('home.landing', ['title' => 'UniProjectManager']);
+        $variant = (string) $request->query('v', '2');
+        $view = $variant === '2' ? 'home.landing_v2' : 'home.landing';
+
+        return view($view, [
+            'title' => 'UniProjectManager',
+            'landing_variant' => $variant,
+        ]);
     }
 }

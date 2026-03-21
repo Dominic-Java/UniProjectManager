@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\CloseExpiredProjectsMiddleware;
 use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\SecurityHeadersMiddleware;
 use App\Http\Middleware\ForceHttpsMiddleware;
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => RoleMiddleware::class,
         ]);
+        $middleware->appendToGroup('web', CloseExpiredProjectsMiddleware::class);
         $middleware->appendToGroup('web', ForceHttpsMiddleware::class);
         $middleware->appendToGroup('web', SecurityHeadersMiddleware::class);
     })

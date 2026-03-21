@@ -7,41 +7,58 @@
     <title>{{ $title ?? 'UniProjectManager' }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #f5f3ee;
-            --ink: #101828;
-            --muted: #556070;
-            --accent: #2563eb;
-            --accent-strong: #1d4ed8;
-            --accent-soft: #e0ebff;
-            --card: #ffffff;
-            --line: #e6e2da;
-            --shadow: 0 18px 30px rgba(15, 23, 42, 0.08);
+            --bg: #fff8f1;
+            --ink: #2b1608;
+            --muted: #7c5e46;
+            --accent: #fb923c;
+            --accent-strong: #ea580c;
+            --accent-soft: #ffedd5;
+            --card: #fffdf9;
+            --line: #f0d7c2;
+            --shadow: 0 16px 30px rgba(120, 53, 15, 0.12);
         }
         * { box-sizing: border-box; }
+        html {
+            font-size: 16px;
+            overflow-x: hidden;
+            width: 100%;
+        }
         body {
             margin: 0;
             font-family: "Manrope", "Segoe UI", sans-serif;
             color: var(--ink);
             background:
-                radial-gradient(900px 420px at 10% -10%, #e3eefc 0%, transparent 60%),
-                radial-gradient(700px 340px at 90% 0%, #f8e7f0 0%, transparent 55%),
+                radial-gradient(900px 420px at 10% -10%, #ffe8cf 0%, transparent 60%),
+                radial-gradient(700px 340px at 90% 0%, #ffd9b5 0%, transparent 55%),
                 var(--bg);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow-x: hidden;
+            width: 100%;
+        }
+        h1, h2, h3, .brand {
+            font-family: "Outfit", "Manrope", sans-serif;
+            letter-spacing: -0.01em;
         }
         a { color: inherit; text-decoration: none; }
-        .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
-        main.page { flex: 1; }
+        .wrap {
+            width: 100%;
+            max-width: none;
+            padding-inline: clamp(14px, 3.2vw, 56px);
+            margin: 0 auto;
+        }
+        main.page { flex: 1; min-width: 0; width: 100%; }
+        main.page > section { width: 100%; }
         header {
             position: sticky;
             top: 0;
             z-index: 20;
             backdrop-filter: blur(8px);
-            background: rgba(245, 243, 238, 0.8);
+            background: rgba(255, 248, 241, 0.85);
             border-bottom: 1px solid var(--line);
         }
         .nav {
@@ -49,6 +66,10 @@
             align-items: center;
             justify-content: space-between;
             padding: 18px 0;
+            gap: 26px;
+        }
+        .nav-shell {
+            padding-inline: clamp(28px, 6vw, 128px);
         }
         .brand {
             font-weight: 800;
@@ -63,7 +84,7 @@
             border-radius: 10px;
             transition: all 0.2s ease;
         }
-        .menu a:hover { color: var(--ink); background: rgba(37, 99, 235, 0.12); }
+        .menu a:hover { color: var(--ink); background: rgba(249, 115, 22, 0.14); }
         .menu form { margin: 0; }
         .nav-cta { display: inline-flex; gap: 10px; align-items: center; }
         .hero {
@@ -77,17 +98,21 @@
         .hero p { margin: 10px 0 0; color: var(--muted); max-width: 720px; }
         .grid {
             display: grid;
-            grid-template-columns: repeat(12, 1fr);
+            grid-template-columns: repeat(12, minmax(0, 1fr));
             gap: 18px;
             padding-bottom: 40px;
+            width: 100%;
         }
         .card {
             background: var(--card);
             border-radius: 18px;
             padding: 18px 20px;
             box-shadow: var(--shadow);
-            border: 1px solid rgba(148, 163, 184, 0.2);
+            border: 1px solid rgba(249, 115, 22, 0.16);
             animation: lift 0.5s ease both;
+            min-width: 0;
+            overflow-x: auto;
+            width: 100%;
         }
         .card h3 { margin: 0 0 10px; }
         .pill {
@@ -96,8 +121,8 @@
             gap: 8px;
             padding: 6px 12px;
             border-radius: 999px;
-            background: #eef2ff;
-            color: #1e3a8a;
+            background: #fff0df;
+            color: #9a3412;
             font-weight: 700;
             font-size: 13px;
         }
@@ -114,15 +139,16 @@
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .btn-primary { background: linear-gradient(120deg, var(--accent), var(--accent-strong)); color: #fff; }
-        .btn-secondary { background: var(--accent-soft); color: #1e3a8a; border: 1px solid rgba(37, 99, 235, 0.18); }
-        .btn-outline { background: #ffffff; color: #1e3a8a; border: 1px solid rgba(37, 99, 235, 0.35); }
+        .btn-secondary { background: var(--accent-soft); color: #9a3412; border: 1px solid rgba(251, 146, 60, 0.35); }
+        .btn-outline { background: #ffffff; color: #9a3412; border: 1px solid rgba(251, 146, 60, 0.45); }
         .btn-sm { padding: 8px 12px; border-radius: 10px; font-size: 13px; }
         .btn-danger { background: #dc2626; color: #fff; }
-        .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 16px rgba(37, 99, 235, 0.18); }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 16px rgba(234, 88, 12, 0.2); }
         .table {
             width: 100%;
             border-collapse: collapse;
             font-size: 14px;
+            min-width: 0;
         }
         .table th, .table td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; }
         .table th { color: var(--muted); font-weight: 700; font-size: 12px; text-transform: uppercase; }
@@ -147,7 +173,7 @@
         .footer {
             border-top: 1px solid var(--line);
             padding: 18px 0 26px;
-            background: rgba(245, 243, 238, 0.8);
+            background: rgba(255, 248, 241, 0.85);
         }
         .span-4 { grid-column: span 4; }
         .span-5 { grid-column: span 5; }
@@ -162,13 +188,31 @@
         @media (max-width: 900px) {
             .span-4, .span-5, .span-6, .span-7, .span-8 { grid-column: span 12; }
             .menu { gap: 10px; }
+            .table { min-width: 0; }
+            [style*="grid-template-columns:repeat(2,1fr)"],
+            [style*="grid-template-columns:repeat(3,1fr)"],
+            [style*="grid-template-columns:repeat(4,1fr)"],
+            [style*="grid-template-columns: repeat(2, 1fr)"],
+            [style*="grid-template-columns: repeat(3, 1fr)"],
+            [style*="grid-template-columns: repeat(4, 1fr)"] {
+                grid-template-columns: 1fr !important;
+            }
+        }
+        @media (max-width: 640px) {
+            .wrap { padding-inline: 12px; }
+            .nav-shell { padding-inline: 12px; }
+            .nav { align-items: flex-start; flex-direction: column; gap: 10px; }
+            .menu { width: 100%; }
+            .btn { width: 100%; }
+            .hero { padding-top: 20px; }
+            .table { display: block; overflow-x: auto; white-space: nowrap; }
         }
     </style>
     @stack('head')
 </head>
 <body>
 <header>
-    <div class="wrap nav">
+    <div class="wrap nav nav-shell">
         <a class="brand" href="{{ route('landing') }}">UniProjectManager</a>
         <nav class="menu">
             @auth
@@ -206,7 +250,7 @@
 <footer class="footer">
     <div class="wrap muted" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;">
         <span>UniProjectManager · Platforma pentru proiecte studentesti</span>
-        <span>Support: admin@uniprojectmanager.test</span>
+        <span>Support: uniprojectmanager.noreply@gmail.com</span>
     </div>
 </footer>
 

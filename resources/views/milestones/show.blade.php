@@ -12,6 +12,9 @@
             @if (session('success'))
                 <div class="notice success" style="margin-bottom:12px;">{{ session('success') }}</div>
             @endif
+            @if (session('error'))
+                <div class="notice error" style="margin-bottom:12px;">{{ session('error') }}</div>
+            @endif
 
             <table class="table">
                 <tbody>
@@ -38,7 +41,11 @@
         <div class="card span-4">
             <h3>Actiuni</h3>
             <div style="display:flex;flex-direction:column;gap:8px;">
-                <a class="btn btn-secondary" href="{{ route('milestones.edit', $milestone) }}">Editeaza</a>
+                @if(auth()->user()?->hasRole('profesor') && !$milestone->project?->isLocked())
+                    <a class="btn btn-secondary" href="{{ route('milestones.edit', $milestone) }}">Editeaza</a>
+                @elseif(auth()->user()?->hasRole('profesor'))
+                    <div class="notice">Proiectul este inchis dupa deadline.</div>
+                @endif
                 <a class="btn btn-secondary" href="{{ route('milestones.index') }}">Inapoi</a>
             </div>
         </div>

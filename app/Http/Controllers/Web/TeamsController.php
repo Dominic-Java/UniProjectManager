@@ -33,14 +33,27 @@ class TeamsController extends Controller
             'title' => 'Echipe',
             'teams' => $teams,
             'invitations' => $invitations,
+            'can_create_team' => Project::query()->openForParticipation()->exists(),
         ]);
     }
 
     public function create(): View
     {
+        $user = auth()->user();
+
         return view('teams.create', [
             'title' => 'Creeaza echipa',
-            'projects' => Project::orderByDesc('created_at')->get(),
+            'projects' => Project::query()
+                ->openForParticipation()
+                ->orderByDesc('created_at')
+                ->get(),
+            'students' => $user?->hasRole('profesor')
+                ? User::query()
+                    ->where('role', 'student')
+                    ->orderBy('first_name')
+                    ->orderBy('last_name')
+                    ->get(['id', 'first_name', 'last_name', 'email'])
+                : collect(),
         ]);
     }
 
@@ -50,6 +63,7 @@ class TeamsController extends Controller
             'project_id' => ['required', 'exists:projects,id'],
             'name' => ['required', 'string', 'max:150'],
             'status' => ['nullable', 'in:active,locked,archived'],
+            'captain_user_id' => ['nullable', 'exists:users,id'],
         ]);
 
         $validated['name'] = trim($validated['name']);
@@ -60,15 +74,57 @@ class TeamsController extends Controller
             ],
         ]);
 
+        $project = Project::findOrFail($validated['project_id']);
+        if ($response = $this->blockIfProjectLocked($project)) {
+            return $response;
+        }
+
+        $leaderId = $request->user()->id;
+
+        if ($request->user()->hasRole('profesor')) {
+            if (empty($validated['captain_user_id'])) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['captain_user_id' => 'Profesorul trebuie sa desemneze un capitan (student).']);
+            }
+
+            $captain = User::findOrFail((int) $validated['captain_user_id']);
+            if (!$captain->hasRole('student')) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['captain_user_id' => 'Capitanul echipei trebuie sa aiba rolul student.']);
+            }
+
+            if ($this->isUserAlreadyInProjectTeam($project->id, $captain->id)) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['captain_user_id' => 'Studentul selectat este deja intr-o alta echipa pentru acest proiect.']);
+            }
+
+            $leaderId = $captain->id;
+        } else {
+            abort_unless($request->user()->hasRole('student'), 403);
+
+            if ($this->isUserAlreadyInProjectTeam($project->id, $request->user()->id)) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['project_id' => 'Esti deja membru intr-o echipa pentru acest proiect.']);
+            }
+        }
+
+        $status = $request->user()->hasRole('profesor')
+            ? ($validated['status'] ?? 'active')
+            : 'active';
+
         $team = Team::create([
             'project_id' => $validated['project_id'],
             'name' => $validated['name'],
-            'status' => $validated['status'] ?? 'active',
+            'status' => $status,
             'created_by' => $request->user()->id,
         ]);
 
         DB::table('team_members')->updateOrInsert(
-            ['team_id' => $team->id, 'user_id' => $request->user()->id],
+            ['team_id' => $team->id, 'user_id' => $leaderId],
             ['role' => 'leader', 'joined_at' => now()]
         );
 
@@ -91,12 +147,16 @@ class TeamsController extends Controller
             'team' => $team,
             'invitations' => $invitations,
             'can_manage' => $this->canManageTeam(request()->user(), $team),
+            'project_locked' => (bool) $team->project?->isLocked(),
         ]);
     }
 
-    public function edit(Team $team): View
+    public function edit(Team $team): View|RedirectResponse
     {
         $this->abortIfCannotManage($team);
+        if ($response = $this->blockIfTeamProjectLocked($team)) {
+            return $response;
+        }
 
         return view('teams.edit', [
             'title' => 'Editeaza echipa',
@@ -107,6 +167,9 @@ class TeamsController extends Controller
     public function update(Request $request, Team $team): RedirectResponse
     {
         $this->abortIfCannotManage($team);
+        if ($response = $this->blockIfTeamProjectLocked($team)) {
+            return $response;
+        }
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
@@ -130,6 +193,9 @@ class TeamsController extends Controller
     public function destroy(Team $team): RedirectResponse
     {
         $this->abortIfCannotManage($team);
+        if ($response = $this->blockIfTeamProjectLocked($team)) {
+            return $response;
+        }
 
         $teamId = $team->id;
         $team->delete();
@@ -141,6 +207,9 @@ class TeamsController extends Controller
     public function sendInvitation(Request $request, Team $team): RedirectResponse
     {
         $this->abortIfCannotManage($team);
+        if ($response = $this->blockIfTeamProjectLocked($team)) {
+            return $response;
+        }
 
         $validated = $request->validate([
             'email' => ['required', 'email'],
@@ -151,6 +220,15 @@ class TeamsController extends Controller
         if (!$user) {
             return back()->withErrors(['email' => 'Utilizatorul nu exista.']);
         }
+        if (!$user->hasRole('student')) {
+            return back()->withErrors(['email' => 'In echipe pot fi invitati doar studenti.']);
+        }
+
+        $team->loadMissing('project');
+
+        if (!$team->project) {
+            return back()->withErrors(['email' => 'Echipa nu are un proiect asociat valid.']);
+        }
 
         $alreadyMember = DB::table('team_members')
             ->where('team_id', $team->id)
@@ -159,6 +237,14 @@ class TeamsController extends Controller
 
         if ($alreadyMember) {
             return back()->withErrors(['email' => 'Utilizatorul este deja membru in echipa.']);
+        }
+
+        if ($this->isUserAlreadyInProjectTeam($team->project_id, $user->id, $team->id)) {
+            return back()->withErrors(['email' => 'Studentul este deja intr-o alta echipa pe acest proiect.']);
+        }
+
+        if ($this->teamIsAtCapacity($team)) {
+            return back()->withErrors(['email' => 'Echipa a atins numarul maxim de membri setat in proiect.']);
         }
 
         $pendingInvite = TeamInvitation::where('team_id', $team->id)
@@ -193,6 +279,15 @@ class TeamsController extends Controller
             abort(403);
         }
 
+        $invitation->loadMissing('team.project');
+        if (!$invitation->team?->project) {
+            return back()->with('error', 'Invitatia nu are un proiect asociat valid.');
+        }
+
+        if ($response = $this->blockIfProjectLocked($invitation->team->project)) {
+            return $response;
+        }
+
         $validated = $request->validate([
             'action' => ['required', 'in:accept,reject'],
         ]);
@@ -200,6 +295,18 @@ class TeamsController extends Controller
         $status = $validated['action'] === 'accept' ? 'accepted' : 'rejected';
 
         if ($status === 'accepted') {
+            if (!$request->user()->hasRole('student')) {
+                return back()->with('error', 'Doar studentii pot accepta invitatii in echipa.');
+            }
+
+            if ($this->isUserAlreadyInProjectTeam($invitation->team->project_id, $request->user()->id, $invitation->team_id)) {
+                return back()->with('error', 'Esti deja intr-o alta echipa pentru acest proiect.');
+            }
+
+            if ($this->teamIsAtCapacity($invitation->team)) {
+                return back()->with('error', 'Echipa a atins numarul maxim de membri setat in proiect.');
+            }
+
             DB::table('team_members')->updateOrInsert(
                 ['team_id' => $invitation->team_id, 'user_id' => $request->user()->id],
                 ['role' => 'member', 'joined_at' => now()]
@@ -222,6 +329,9 @@ class TeamsController extends Controller
     {
         $team = Team::findOrFail($invitation->team_id);
         $this->abortIfCannotManage($team);
+        if ($response = $this->blockIfTeamProjectLocked($team)) {
+            return $response;
+        }
 
         $invitation->update([
             'status' => 'canceled',
@@ -238,6 +348,9 @@ class TeamsController extends Controller
     public function addMember(Request $request, Team $team): RedirectResponse
     {
         $this->abortIfCannotManage($team);
+        if ($response = $this->blockIfTeamProjectLocked($team)) {
+            return $response;
+        }
 
         $validated = $request->validate([
             'email' => ['required', 'email'],
@@ -247,6 +360,9 @@ class TeamsController extends Controller
         if (!$user) {
             return back()->withErrors(['email' => 'Utilizatorul nu exista.']);
         }
+        if (!$user->hasRole('student')) {
+            return back()->withErrors(['email' => 'In echipe pot fi adaugati doar studenti.']);
+        }
 
         $alreadyMember = DB::table('team_members')
             ->where('team_id', $team->id)
@@ -255,6 +371,14 @@ class TeamsController extends Controller
 
         if ($alreadyMember) {
             return back()->withErrors(['email' => 'Utilizatorul este deja membru.']);
+        }
+
+        if ($this->isUserAlreadyInProjectTeam($team->project_id, $user->id, $team->id)) {
+            return back()->withErrors(['email' => 'Studentul este deja intr-o alta echipa pe acest proiect.']);
+        }
+
+        if ($this->teamIsAtCapacity($team)) {
+            return back()->withErrors(['email' => 'Echipa a atins numarul maxim de membri setat in proiect.']);
         }
 
         DB::table('team_members')->insert([
@@ -274,6 +398,9 @@ class TeamsController extends Controller
     public function removeMember(Team $team, User $user): RedirectResponse
     {
         $this->abortIfCannotManage($team);
+        if ($response = $this->blockIfTeamProjectLocked($team)) {
+            return $response;
+        }
 
         DB::table('team_members')
             ->where('team_id', $team->id)
@@ -313,5 +440,54 @@ class TeamsController extends Controller
             ->where('user_id', $user->id)
             ->where('role', 'leader')
             ->exists();
+    }
+
+    private function blockIfTeamProjectLocked(Team $team): ?RedirectResponse
+    {
+        $team->loadMissing('project');
+
+        if (!$team->project) {
+            return back()->with('error', 'Echipa nu are un proiect asociat.');
+        }
+
+        return $this->blockIfProjectLocked($team->project);
+    }
+
+    private function blockIfProjectLocked(Project $project): ?RedirectResponse
+    {
+        if (!$project->isLocked()) {
+            return null;
+        }
+
+        return back()->with('error', 'Proiectul este inchis dupa deadline. Nu mai pot fi facute modificari.');
+    }
+
+    private function teamIsAtCapacity(Team $team): bool
+    {
+        $team->loadMissing('project');
+
+        if (!$team->project) {
+            return true;
+        }
+
+        $membersCount = (int) DB::table('team_members')
+            ->where('team_id', $team->id)
+            ->count();
+
+        return $membersCount >= (int) $team->project->max_team_size;
+    }
+
+    private function isUserAlreadyInProjectTeam(int $projectId, int $userId, ?int $excludeTeamId = null): bool
+    {
+        $query = DB::table('team_members')
+            ->join('teams', 'teams.id', '=', 'team_members.team_id')
+            ->where('teams.project_id', $projectId)
+            ->where('team_members.user_id', $userId);
+
+        if ($excludeTeamId) {
+            $query->where('teams.id', '!=', $excludeTeamId);
+        }
+
+        return $query->exists();
     }
 }

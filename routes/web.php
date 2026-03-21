@@ -9,13 +9,13 @@ use App\Http\Controllers\Web\MilestonesController;
 use App\Http\Controllers\Web\SettingsController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\ProfileController;
+use App\Http\Controllers\Web\ProjectMaterialsController;
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes
+| Web Routes (Blade views)
 |--------------------------------------------------------------------------
-| Rute pentru interfata web (Blade views)
-|--------------------------------------------------------------------------
+
 */
 
 Route::get('/', [HomeController::class, 'landing'])->name('landing');
@@ -25,9 +25,10 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1')->name('login.submit');
     Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('password.request');
     Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->middleware('throttle:5,1')->name('password.email');
-    Route::get('/reset-password', [AuthController::class, 'showResetPassword'])->name('password.reset');
-    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1')->name('password.update');
 });
+
+Route::get('/reset-password', [AuthController::class, 'showResetPassword'])->name('password.reset');
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1')->name('password.update');
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
@@ -37,6 +38,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/password-reset-link', [ProfileController::class, 'sendPasswordResetLink'])->name('profile.password-reset-link');
 
     Route::get('/projects', [ProjectsController::class, 'index'])->name('projects.index');
     Route::get('/projects/create', [ProjectsController::class, 'create'])
@@ -46,6 +48,14 @@ Route::middleware('auth')->group(function () {
         ->middleware('role:profesor')
         ->name('projects.store');
     Route::get('/projects/{project}', [ProjectsController::class, 'show'])->name('projects.show');
+    Route::post('/projects/{project}/materials', [ProjectMaterialsController::class, 'store'])
+        ->middleware('role:profesor')
+        ->name('projects.materials.store');
+    Route::get('/project-materials/{material}/download', [ProjectMaterialsController::class, 'download'])
+        ->name('projects.materials.download');
+    Route::delete('/project-materials/{material}', [ProjectMaterialsController::class, 'destroy'])
+        ->middleware('role:profesor')
+        ->name('projects.materials.destroy');
     Route::get('/projects/{project}/edit', [ProjectsController::class, 'edit'])
         ->middleware('role:profesor')
         ->name('projects.edit');
@@ -85,6 +95,13 @@ Route::middleware('auth')->group(function () {
         ->middleware('role:profesor')
         ->name('deliverables.store');
     Route::get('/deliverables/{deliverable}', [DeliverablesController::class, 'show'])->name('deliverables.show');
+    Route::post('/deliverables/{deliverable}/submit', [DeliverablesController::class, 'submit'])
+        ->middleware('throttle:10,1')
+        ->name('deliverables.submit');
+    Route::get('/deliverable-submissions/{submission}/download', [DeliverablesController::class, 'downloadSubmission'])
+        ->name('deliverables.submissions.download');
+    Route::delete('/deliverable-submissions/{submission}', [DeliverablesController::class, 'cancelSubmission'])
+        ->name('deliverables.submissions.cancel');
     Route::get('/deliverables/{deliverable}/edit', [DeliverablesController::class, 'edit'])
         ->middleware('role:profesor')
         ->name('deliverables.edit');
@@ -96,18 +113,31 @@ Route::middleware('auth')->group(function () {
         ->name('deliverables.destroy');
 
     Route::get('/milestones', [MilestonesController::class, 'index'])->name('milestones.index');
-    Route::get('/milestones/create', [MilestonesController::class, 'create'])->name('milestones.create');
-    Route::post('/milestones', [MilestonesController::class, 'store'])->name('milestones.store');
+    Route::get('/milestones/create', [MilestonesController::class, 'create'])
+        ->middleware('role:profesor')
+        ->name('milestones.create');
+    Route::post('/milestones', [MilestonesController::class, 'store'])
+        ->middleware('role:profesor')
+        ->name('milestones.store');
     Route::get('/milestones/{milestone}', [MilestonesController::class, 'show'])->name('milestones.show');
-    Route::get('/milestones/{milestone}/edit', [MilestonesController::class, 'edit'])->name('milestones.edit');
-    Route::put('/milestones/{milestone}', [MilestonesController::class, 'update'])->name('milestones.update');
-    Route::delete('/milestones/{milestone}', [MilestonesController::class, 'destroy'])->name('milestones.destroy');
+    Route::get('/milestones/{milestone}/edit', [MilestonesController::class, 'edit'])
+        ->middleware('role:profesor')
+        ->name('milestones.edit');
+    Route::put('/milestones/{milestone}', [MilestonesController::class, 'update'])
+        ->middleware('role:profesor')
+        ->name('milestones.update');
+    Route::delete('/milestones/{milestone}', [MilestonesController::class, 'destroy'])
+        ->middleware('role:profesor')
+        ->name('milestones.destroy');
     Route::get('/settings', [SettingsController::class, 'index'])
         ->middleware('role:profesor')
         ->name('settings.index');
     Route::post('/settings/users', [SettingsController::class, 'store'])
         ->middleware('role:profesor')
         ->name('settings.users.store');
+    Route::post('/settings/users/{user}/password-reset-link', [SettingsController::class, 'sendPasswordResetLink'])
+        ->middleware('role:profesor')
+        ->name('settings.users.password-reset-link');
     Route::put('/settings/users/{user}', [SettingsController::class, 'updateUserRole'])
         ->middleware('role:profesor')
         ->name('settings.users.update');

@@ -26,14 +26,21 @@ class MilestonesController extends Controller
 
     public function create(): View
     {
+        abort_unless(auth()->user()?->hasRole('profesor'), 403);
+
         return view('milestones.create', [
             'title' => 'Creeaza milestone',
-            'projects' => Project::orderByDesc('created_at')->get(),
+            'projects' => Project::query()
+                ->openForParticipation()
+                ->orderByDesc('created_at')
+                ->get(),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
+        abort_unless($request->user()?->hasRole('profesor'), 403);
+
         $validated = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
             'title' => ['required', 'string', 'max:200'],
@@ -41,6 +48,13 @@ class MilestonesController extends Controller
             'due_at' => ['nullable', 'date'],
             'weight' => ['required', 'numeric', 'min:0', 'max:999.99'],
         ]);
+
+        $project = Project::findOrFail($validated['project_id']);
+        if ($project->isLocked()) {
+            return back()
+                ->withInput()
+                ->with('error', $this->projectLockedMessage());
+        }
 
         $milestone = Milestone::create([
             'project_id' => $validated['project_id'],
@@ -66,17 +80,34 @@ class MilestonesController extends Controller
         ]);
     }
 
-    public function edit(Milestone $milestone): View
+    public function edit(Milestone $milestone): View|RedirectResponse
     {
+        abort_unless(auth()->user()?->hasRole('profesor'), 403);
+
+        $milestone->loadMissing('project');
+        if ($milestone->project?->isLocked()) {
+            return redirect()
+                ->route('milestones.show', $milestone)
+                ->with('error', $this->projectLockedMessage());
+        }
+
         return view('milestones.edit', [
             'title' => 'Editeaza milestone',
             'milestone' => $milestone,
-            'projects' => Project::orderByDesc('created_at')->get(),
+            'projects' => Project::query()
+                ->where(function ($query) use ($milestone) {
+                    $query->openForParticipation()
+                        ->orWhere('id', $milestone->project_id);
+                })
+                ->orderByDesc('created_at')
+                ->get(),
         ]);
     }
 
     public function update(Request $request, Milestone $milestone): RedirectResponse
     {
+        abort_unless($request->user()?->hasRole('profesor'), 403);
+
         $validated = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
             'title' => ['required', 'string', 'max:200'],
@@ -84,6 +115,13 @@ class MilestonesController extends Controller
             'due_at' => ['nullable', 'date'],
             'weight' => ['required', 'numeric', 'min:0', 'max:999.99'],
         ]);
+
+        $project = Project::findOrFail($validated['project_id']);
+        if ($project->isLocked()) {
+            return back()
+                ->withInput()
+                ->with('error', $this->projectLockedMessage());
+        }
 
         $milestone->update($validated);
         AuditLogger::log('milestones.update', $request->user(), 'milestone', $milestone->id);
@@ -93,10 +131,22 @@ class MilestonesController extends Controller
 
     public function destroy(Milestone $milestone): RedirectResponse
     {
+        abort_unless(request()->user()?->hasRole('profesor'), 403);
+
+        $milestone->loadMissing('project');
+        if ($milestone->project?->isLocked()) {
+            return back()->with('error', $this->projectLockedMessage());
+        }
+
         $milestoneId = $milestone->id;
         $milestone->delete();
         AuditLogger::log('milestones.delete', request()->user(), 'milestone', $milestoneId);
 
         return redirect()->route('milestones.index')->with('success', 'Milestone-ul a fost sters.');
+    }
+
+    private function projectLockedMessage(): string
+    {
+        return 'Proiectul este inchis dupa deadline. Milestone-urile nu mai pot fi modificate.';
     }
 }

@@ -3,8 +3,8 @@
 @section('content')
     <section class="hero">
         <div class="pill">Resetare parola</div>
-        <h1>Seteaza o parola noua</h1>
-        <p>Completeaza formularul pentru a finaliza resetarea.</p>
+        <h1>Seteaza parola noua</h1>
+        <p>Pagina dedicata pentru resetare. Dupa confirmare, sesiunea curenta se inchide automat.</p>
     </section>
 
     <section class="grid">
@@ -37,7 +37,7 @@
                 </div>
 
                 <div style="margin-top:16px;">
-                    <button type="submit" class="btn btn-primary">Reseteaza parola</button>
+                    <button type="submit" class="btn btn-primary">Confirma noua parola</button>
                 </div>
             </form>
         </div>

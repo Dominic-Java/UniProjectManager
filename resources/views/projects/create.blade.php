@@ -2,9 +2,9 @@
 
 @section('content')
     <section class="hero">
-        <div class="pill">Proiect nou</div>
-        <h1>Creeaza proiect</h1>
-        <p>Completeaza informatiile de baza pentru un proiect studentesc.</p>
+        <div class="pill">Classroom nou</div>
+        <h1>Creeaza classroom pe materie</h1>
+        <p>Configureaza proiectul si regulile de echipa pentru materia predata.</p>
     </section>
 
     <section class="grid">
@@ -37,11 +37,11 @@
                 </div>
 
                 <div style="margin-bottom:12px;">
-                    <label class="muted">Domeniu (optional)</label>
-                    <input type="text" name="domain" value="{{ old('domain') }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
+                    <label class="muted">Materie / disciplina</label>
+                    <input type="text" name="domain" value="{{ old('domain') }}" placeholder="Ex: Ingineria Programarii" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);" required>
                 </div>
 
-                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px;">
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;">
                     <div>
                         <label class="muted">Data inceput</label>
                         <input type="date" name="start_date" value="{{ old('start_date') }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
@@ -49,6 +49,10 @@
                     <div>
                         <label class="muted">Data finalizare</label>
                         <input type="date" name="end_date" value="{{ old('end_date') }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
+                    </div>
+                    <div>
+                        <label class="muted">Deadline inchidere (data + ora)</label>
+                        <input type="datetime-local" name="deadline_at" value="{{ old('deadline_at') }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
                     </div>
                 </div>
 
@@ -93,9 +97,9 @@
         <div class="card span-4">
             <h3>Recomandari</h3>
             <ul>
-                <li>Defineste tema proiectului.</li>
-                <li>Adauga un interval realist.</li>
-                <li>Completeaza descrierea pentru echipa.</li>
+                <li>Completeaza materia ca studentii sa stie clar contextul.</li>
+                <li>Seteaza dimensiunea minima/maxima a echipei.</li>
+                <li>Adauga deadline-ul de inchidere pentru blocare automata.</li>
             </ul>
         </div>
     </section>

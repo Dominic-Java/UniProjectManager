@@ -26,7 +26,9 @@
                     <thead>
                     <tr>
                         <th>Titlu</th>
+                        <th>Materie</th>
                         <th>Status</th>
+                        <th>Deadline</th>
                         <th>Start</th>
                         <th>End</th>
                         <th>Creat</th>
@@ -37,7 +39,9 @@
                     @foreach($projects as $project)
                         <tr>
                             <td>{{ $project['title'] }}</td>
+                            <td>{{ $project['domain'] ?? '-' }}</td>
                             <td>{{ $project['status'] }}</td>
+                            <td>{{ $project['deadline_at'] ?? '-' }}</td>
                             <td>{{ $project['start_date'] ?? '-' }}</td>
                             <td>{{ $project['end_date'] ?? '-' }}</td>
                             <td>{{ $project['created_at'] ?? '-' }}</td>

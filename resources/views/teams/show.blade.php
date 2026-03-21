@@ -12,8 +12,16 @@
             @if (session('success'))
                 <div class="notice success" style="margin-bottom:12px;">{{ session('success') }}</div>
             @endif
+            @if (session('error'))
+                <div class="notice error" style="margin-bottom:12px;">{{ session('error') }}</div>
+            @endif
             @if ($errors->any())
                 <div class="notice error" style="margin-bottom:12px;">{{ $errors->first() }}</div>
+            @endif
+            @if ($project_locked)
+                <div class="notice error" style="margin-bottom:12px;">
+                    Proiectul este inchis dupa deadline. Nu mai poti invita, adauga sau elimina membri.
+                </div>
             @endif
 
             <table class="table">
@@ -33,7 +41,7 @@
         <div class="card span-4">
             <h3>Actiuni</h3>
             <div style="display:flex;flex-direction:column;gap:8px;">
-                @if($can_manage)
+                @if($can_manage && !$project_locked)
                     <a class="btn btn-secondary" href="{{ route('teams.edit', $team) }}">Editeaza echipa</a>
                 @endif
                 <a class="btn btn-secondary" href="{{ route('teams.index') }}">Inapoi la lista</a>
@@ -46,7 +54,7 @@
                 @foreach($team->members as $member)
                     <li>
                         {{ $member->name }} ({{ $member->pivot->role }})
-                        @if($can_manage)
+                        @if($can_manage && !$project_locked)
                             <form method="POST" action="{{ route('teams.members.remove', [$team, $member]) }}" style="display:inline;">
                                 @csrf
                                 @method('DELETE')
@@ -57,7 +65,7 @@
                 @endforeach
             </ul>
 
-            @if($can_manage)
+            @if($can_manage && !$project_locked)
                 <form method="POST" action="{{ route('teams.members.add', $team) }}" style="margin-top:12px;">
                     @csrf
                     <label class="label" for="member_email">Adauga membru (email)</label>
@@ -73,7 +81,7 @@
                 @foreach($invitations as $inv)
                     <li>
                         {{ $inv->invitedUser?->name ?? '-' }} - {{ $inv->status }}
-                        @if($can_manage && $inv->status === 'pending')
+                        @if($can_manage && !$project_locked && $inv->status === 'pending')
                             <form method="POST" action="{{ route('teams.invitations.cancel', $inv) }}" style="display:inline;">
                                 @csrf
                                 @method('DELETE')
@@ -84,7 +92,7 @@
                 @endforeach
             </ul>
 
-            @if($can_manage)
+            @if($can_manage && !$project_locked)
                 <form method="POST" action="{{ route('teams.invitations.send', $team) }}" style="margin-top:12px;">
                     @csrf
                     <label class="label" for="invite_email">Invita membru (email)</label>

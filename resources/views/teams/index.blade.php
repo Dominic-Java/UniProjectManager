@@ -12,6 +12,9 @@
             @if (session('success'))
                 <div class="notice success" style="margin-bottom:12px;">{{ session('success') }}</div>
             @endif
+            @if (session('error'))
+                <div class="notice error" style="margin-bottom:12px;">{{ session('error') }}</div>
+            @endif
             @if ($errors->any())
                 <div class="notice error" style="margin-bottom:12px;">{{ $errors->first() }}</div>
             @endif
@@ -31,6 +34,7 @@
                     </thead>
                     <tbody>
                     @foreach($teams as $team)
+                        @php($teamLocked = $team->project?->isLocked())
                         <tr>
                             <td>{{ $team->name }}</td>
                             <td>{{ $team->project?->title ?? '-' }}</td>
@@ -39,13 +43,15 @@
                             <td>
                                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                                     <a class="btn btn-secondary" href="{{ route('teams.show', $team) }}">Detalii</a>
-                                    @if(auth()->user()?->hasRole('profesor') || $team->created_by === auth()->id())
+                                    @if((auth()->user()?->hasRole('profesor') || $team->created_by === auth()->id()) && !$teamLocked)
                                         <a class="btn btn-secondary" href="{{ route('teams.edit', $team) }}">Editeaza</a>
                                         <form method="POST" action="{{ route('teams.destroy', $team) }}">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-danger" onclick="return confirm('Stergi echipa?')">Sterge</button>
                                         </form>
+                                    @elseif($teamLocked)
+                                        <span class="muted">Proiect inchis</span>
                                     @endif
                                 </div>
                             </td>
@@ -59,7 +65,11 @@
         <div class="card span-4">
             <h3>Actiuni</h3>
             <p class="muted">Creeaza echipe si gestioneaza membrii.</p>
-            <a class="btn btn-primary" href="{{ route('teams.create') }}">Creeaza echipa</a>
+            @if($can_create_team)
+                <a class="btn btn-primary" href="{{ route('teams.create') }}">Creeaza echipa</a>
+            @else
+                <div class="notice">Nu exista proiecte deschise pentru echipe noi.</div>
+            @endif
         </div>
 
         <div class="card span-12">
@@ -78,21 +88,26 @@
                     </thead>
                     <tbody>
                     @foreach($invitations as $inv)
+                        @php($projectLocked = $inv->team?->project?->isLocked())
                         <tr>
                             <td>{{ $inv->team?->name ?? '-' }}</td>
                             <td>{{ $inv->team?->project?->title ?? '-' }}</td>
                             <td>{{ $inv->invitedBy?->name ?? '-' }}</td>
                             <td>
-                                <form method="POST" action="{{ route('teams.invitations.respond', $inv) }}" style="display:inline;">
-                                    @csrf
-                                    <input type="hidden" name="action" value="accept">
-                                    <button type="submit" class="btn btn-primary">Accepta</button>
-                                </form>
-                                <form method="POST" action="{{ route('teams.invitations.respond', $inv) }}" style="display:inline;">
-                                    @csrf
-                                    <input type="hidden" name="action" value="reject">
-                                    <button type="submit" class="btn btn-secondary">Respinge</button>
-                                </form>
+                                @if($projectLocked)
+                                    <span class="muted">Proiect inchis dupa deadline</span>
+                                @else
+                                    <form method="POST" action="{{ route('teams.invitations.respond', $inv) }}" style="display:inline;">
+                                        @csrf
+                                        <input type="hidden" name="action" value="accept">
+                                        <button type="submit" class="btn btn-primary">Accepta</button>
+                                    </form>
+                                    <form method="POST" action="{{ route('teams.invitations.respond', $inv) }}" style="display:inline;">
+                                        @csrf
+                                        <input type="hidden" name="action" value="reject">
+                                        <button type="submit" class="btn btn-secondary">Respinge</button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

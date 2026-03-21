@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Services\Projects\ProjectNotificationService;
 use App\Services\Projects\ProjectsService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -11,7 +12,10 @@ use App\Services\Security\AuditLogger;
 
 class ProjectsController extends Controller
 {
-    public function __construct(private ProjectsService $service) {}
+    public function __construct(
+        private ProjectsService $service,
+        private ProjectNotificationService $projectNotificationService
+    ) {}
 
     public function index()
     {
@@ -32,13 +36,14 @@ class ProjectsController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
-            'domain' => ['nullable', 'string', 'max:120'],
+            'domain' => ['required', 'string', 'max:120'],
             'visibility' => ['nullable', 'in:public,private'],
             'status' => ['nullable', 'in:draft,open,in_progress,closed,archived'],
             'min_team_size' => ['nullable', 'integer', 'min:1', 'max:20', 'lte:max_team_size'],
             'max_team_size' => ['nullable', 'integer', 'min:1', 'max:20', 'gte:min_team_size'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'deadline_at' => ['nullable', 'date', 'after_or_equal:start_date'],
             'code' => ['nullable', 'string', 'max:50', 'unique:projects,code'],
         ]);
 
@@ -48,8 +53,23 @@ class ProjectsController extends Controller
             return back()->withInput()->with('error', $result['message']);
         }
 
-        AuditLogger::log('projects.create', $request->user(), 'project', null, [
+        if (!empty($result['project_id'])) {
+            $project = Project::query()->find($result['project_id']);
+            if ($project) {
+                try {
+                    $this->projectNotificationService->notifyProjectCreated($project, $request->user());
+                } catch (\Throwable $exception) {
+                    report($exception);
+                    AuditLogger::log('projects.notification.failed', $request->user(), 'project', $project->id, [
+                        'error' => $exception->getMessage(),
+                    ]);
+                }
+            }
+        }
+
+        AuditLogger::log('projects.create', $request->user(), 'project', $result['project_id'] ?? null, [
             'title' => $validated['title'],
+            'domain' => $validated['domain'],
         ]);
 
         return redirect()->route('projects.index')->with('success', $result['message']);
@@ -57,7 +77,7 @@ class ProjectsController extends Controller
 
     public function show(Project $project)
     {
-        $project->load(['teams', 'deliverables', 'milestones', 'requirements', 'staff', 'createdBy']);
+        $project->load(['teams', 'deliverables', 'milestones', 'requirements', 'staff', 'createdBy', 'materials.uploadedBy']);
 
         return view('projects.show', [
             'title' => 'Detalii proiect',
@@ -83,13 +103,14 @@ class ProjectsController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'code' => ['nullable', 'string', 'max:50', Rule::unique('projects', 'code')->ignore($project->id)],
             'description' => ['required', 'string'],
-            'domain' => ['nullable', 'string', 'max:120'],
+            'domain' => ['required', 'string', 'max:120'],
             'visibility' => ['required', 'in:public,private'],
             'status' => ['required', 'in:draft,open,in_progress,closed,archived'],
             'min_team_size' => ['required', 'integer', 'min:1', 'max:20', 'lte:max_team_size'],
             'max_team_size' => ['required', 'integer', 'min:1', 'max:20', 'gte:min_team_size'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'deadline_at' => ['nullable', 'date', 'after_or_equal:start_date'],
         ]);
 
         $project->update($validated);

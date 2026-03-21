@@ -9,12 +9,18 @@
 
     <section class="grid">
         <div class="card span-8">
+            @if (session('error'))
+                <div class="notice error" style="margin-bottom:12px;">{{ session('error') }}</div>
+            @endif
             @if ($errors->any())
                 <div class="notice error" style="margin-bottom:12px;">{{ $errors->first() }}</div>
             @endif
 
-            <form method="POST" action="{{ route('deliverables.store') }}">
-                @csrf
+            @if ($projects->count() === 0)
+                <div class="notice">Nu exista proiecte deschise pentru care poti crea livrabile.</div>
+            @else
+                <form method="POST" action="{{ route('deliverables.store') }}">
+                    @csrf
 
                 <div style="margin-bottom:12px;">
                     <label class="label" for="project_id">Proiect</label>
@@ -66,11 +72,12 @@
                     </select>
                 </div>
 
-                <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                    <button type="submit" class="btn btn-primary">Salveaza livrabil</button>
-                    <a href="{{ route('deliverables.index') }}" class="btn btn-secondary">Inapoi</a>
-                </div>
-            </form>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <button type="submit" class="btn btn-primary">Salveaza livrabil</button>
+                        <a href="{{ route('deliverables.index') }}" class="btn btn-secondary">Inapoi</a>
+                    </div>
+                </form>
+            @endif
         </div>
     </section>
 @endsection

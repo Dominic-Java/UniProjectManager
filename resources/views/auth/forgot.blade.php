@@ -13,15 +13,6 @@
                 <div class="notice" style="margin-bottom:12px;">{{ session('status') }}</div>
             @endif
 
-            @if (session('reset_link'))
-                <div class="notice success" style="margin-bottom:12px;">
-                    Link resetare (demo):
-                    <div style="margin-top:6px;">
-                        <a href="{{ session('reset_link') }}">{{ session('reset_link') }}</a>
-                    </div>
-                </div>
-            @endif
-
             @if ($errors->any())
                 <div class="notice error" style="margin-bottom:12px;">
                     Verifica emailul introdus si incearca din nou.

@@ -35,11 +35,11 @@
                 </div>
 
                 <div style="margin-bottom:12px;">
-                    <label class="muted">Domeniu (optional)</label>
-                    <input type="text" name="domain" value="{{ old('domain', $project->domain) }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
+                    <label class="muted">Materie / disciplina</label>
+                    <input type="text" name="domain" value="{{ old('domain', $project->domain) }}" placeholder="Ex: Ingineria Programarii" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);" required>
                 </div>
 
-                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px;">
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;">
                     <div>
                         <label class="muted">Data inceput</label>
                         <input type="date" name="start_date" value="{{ old('start_date', optional($project->start_date)->format('Y-m-d')) }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
@@ -47,6 +47,10 @@
                     <div>
                         <label class="muted">Data finalizare</label>
                         <input type="date" name="end_date" value="{{ old('end_date', optional($project->end_date)->format('Y-m-d')) }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
+                    </div>
+                    <div>
+                        <label class="muted">Deadline inchidere (data + ora)</label>
+                        <input type="datetime-local" name="deadline_at" value="{{ old('deadline_at', optional($project->deadline_at)->format('Y-m-d\\TH:i')) }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
                     </div>
                 </div>
 

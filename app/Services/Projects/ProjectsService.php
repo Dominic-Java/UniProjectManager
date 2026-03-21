@@ -34,6 +34,7 @@ class ProjectsService
             'visibility' => $data['visibility'] ?? 'public',
             'start_date' => $data['start_date'] ?? null,
             'end_date' => $data['end_date'] ?? null,
+            'deadline_at' => $data['deadline_at'] ?? null,
             'status' => $data['status'] ?? 'draft',
             'min_team_size' => $data['min_team_size'] ?? 1,
             'max_team_size' => $data['max_team_size'] ?? 4,
@@ -54,13 +55,28 @@ class ProjectsService
                 'id' => $row->id ?? null,
                 'code' => $row->code ?? null,
                 'title' => $title ?: 'Proiect',
+                'domain' => $row->domain ?? null,
                 'status' => $row->status ?? 'n/a',
-                'start_date' => $row->start_date ?? null,
-                'end_date' => $row->end_date ?? null,
+                'start_date' => $this->formatDate($row->start_date ?? null),
+                'end_date' => $this->formatDate($row->end_date ?? null),
+                'deadline_at' => $this->formatDateTime($row->deadline_at ?? null),
                 'created_at' => $this->formatDateTime($row->created_at ?? null),
             ];
         }
         return $normalized;
+    }
+
+    private function formatDate(?string $value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->format('d.m.Y');
+        } catch (\Throwable $e) {
+            return $value;
+        }
     }
 
     private function formatDateTime(?string $value): ?string

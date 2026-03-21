@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Services\Auth\PasswordResetService;
 use App\Services\Security\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -61,5 +62,20 @@ class ProfileController extends Controller
         AuditLogger::log('profile.update', $user, 'user', $user->id);
 
         return back()->with('success', 'Profilul a fost actualizat.');
+    }
+
+    public function sendPasswordResetLink(Request $request, PasswordResetService $passwordResetService): RedirectResponse
+    {
+        $user = $request->user();
+
+        try {
+            $passwordResetService->sendResetLink($user, $user);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return back()->withErrors(['profile' => 'Nu am putut trimite emailul de resetare. Verifica setarile SMTP.']);
+        }
+
+        return back()->with('success', 'Ti-am trimis pe email linkul pentru resetarea parolei.');
     }
 }

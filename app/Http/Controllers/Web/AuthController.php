@@ -4,12 +4,13 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Auth\PasswordResetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 use App\Services\Security\AuditLogger;
 
@@ -79,17 +80,10 @@ class AuthController extends Controller
                 ->withErrors(['email' => $this->roleEmailErrorMessage($validated['role'])]);
         }
 
-        $existing = User::where('email', $validated['email'])->first();
-        if ($existing) {
-            if (Hash::check($validated['password'], $existing->password_hash)) {
-                return back()
-                    ->withInput($request->except(['password', 'password_confirmation']))
-                    ->withErrors(['email' => 'Acest cont deja exista.']);
-            }
-
+        if (User::where('email', $validated['email'])->exists()) {
             return back()
                 ->withInput($request->except(['password', 'password_confirmation']))
-                ->withErrors(['email' => 'Exista deja un cont cu acest email.']);
+                ->withErrors(['email' => 'Nu s-a putut crea contul cu datele furnizate.']);
         }
 
         $user = User::create([
@@ -122,28 +116,23 @@ class AuthController extends Controller
         return view('auth.forgot', ['title' => 'Resetare parola']);
     }
 
-    public function sendResetLink(Request $request): RedirectResponse
+    public function sendResetLink(Request $request, PasswordResetService $passwordResetService): RedirectResponse
     {
         $validated = $request->validate([
             'email' => ['required', 'email'],
         ]);
 
-        $user = User::where('email', $validated['email'])->first();
+        $email = strtolower($validated['email']);
+        $user = User::where('email', $email)->first();
+
         if ($user) {
-            $token = Str::random(64);
-            $hashed = hash('sha256', $token);
-
-            DB::table('password_reset_tokens')->updateOrInsert(
-                ['email' => $validated['email']],
-                ['token' => $hashed, 'created_at' => now()]
-            );
-
-            AuditLogger::log('auth.password_reset_request', $user, 'user', $user->id);
-
-            return back()->with([
-                'status' => 'Daca emailul exista, vei primi un link de resetare.',
-                'reset_link' => route('password.reset', ['token' => $token, 'email' => $validated['email']]),
-            ]);
+            try {
+                $passwordResetService->sendResetLink($user);
+                AuditLogger::log('auth.password_reset_request', $user, 'user', $user->id);
+            } catch (\Throwable $exception) {
+                report($exception);
+                AuditLogger::log('auth.password_reset_request_failed', $user, 'user', $user->id);
+            }
         }
 
         return back()->with('status', 'Daca emailul exista, vei primi un link de resetare.');
@@ -151,10 +140,17 @@ class AuthController extends Controller
 
     public function showResetPassword(Request $request): View
     {
+        $token = trim((string) $request->query('token', ''));
+        $email = strtolower(trim((string) $request->query('email', '')));
+
+        if ($token === '' || $email === '') {
+            abort(404);
+        }
+
         return view('auth.reset', [
             'title' => 'Resetare parola',
-            'token' => $request->query('token'),
-            'email' => $request->query('email'),
+            'token' => $token,
+            'email' => $email,
         ]);
     }
 
@@ -165,6 +161,7 @@ class AuthController extends Controller
             'email' => ['required', 'email'],
             'password' => ['required', 'confirmed', 'min:8'],
         ]);
+        $validated['email'] = strtolower($validated['email']);
 
         $record = DB::table('password_reset_tokens')
             ->where('email', $validated['email'])
@@ -176,7 +173,7 @@ class AuthController extends Controller
 
         $tokenMatches = hash('sha256', $validated['token']) === $record->token;
         $tokenExpired = $record->created_at
-            ? now()->diffInMinutes($record->created_at) > 60
+            ? now()->diffInMinutes($record->created_at) > PasswordResetService::TOKEN_EXPIRATION_MINUTES
             : true;
 
         if (!$tokenMatches || $tokenExpired) {
@@ -193,9 +190,20 @@ class AuthController extends Controller
         ]);
 
         DB::table('password_reset_tokens')->where('email', $validated['email'])->delete();
+
+        if (Schema::hasTable('sessions') && Schema::hasColumn('sessions', 'user_id')) {
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+        }
+
+        if (Auth::check() && Auth::id() === $user->id) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
         AuditLogger::log('auth.password_reset', $user, 'user', $user->id);
 
-        return redirect()->route('login')->with('success', 'Parola a fost resetata. Te poti autentifica.');
+        return redirect()->route('login')->with('success', 'Parola a fost resetata. Sesiunea a fost inchisa, autentifica-te din nou.');
     }
 
 

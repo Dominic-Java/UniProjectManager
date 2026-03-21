@@ -133,6 +133,10 @@
             <div class="notice">{{ $user->member_code ?? '-' }}</div>
             <p class="muted" style="margin-top:10px;">Rol cont</p>
             <div class="pill" style="margin-top:6px;">{{ ucfirst($user->role) }}</div>
+            <form method="POST" action="{{ route('profile.password-reset-link') }}" style="margin-top:12px;">
+                @csrf
+                <button type="submit" class="btn btn-secondary">Resetare parola</button>
+            </form>
         </div>
     </section>
 @endsection

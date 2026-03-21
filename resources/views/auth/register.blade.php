@@ -11,11 +11,7 @@
         <div class="card span-8">
             @if ($errors->any())
                 <div class="notice error" style="margin-bottom:12px;">
-                    @if ($errors->first() === 'Acest cont deja exista.')
-                        Acest cont deja exista:
-                    @else
-                        {{ $errors->first() }}
-                    @endif
+                    {{ $errors->first() }}
                 </div>
             @endif
 

@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', 'log'),
+    'default' => env('UPM_MAIL_MAILER', env('MAIL_MAILER', 'log')),
 
     /*
     |--------------------------------------------------------------------------
@@ -39,14 +39,14 @@ return [
 
         'smtp' => [
             'transport' => 'smtp',
-            'scheme' => env('MAIL_SCHEME'),
-            'url' => env('MAIL_URL'),
-            'host' => env('MAIL_HOST', '127.0.0.1'),
-            'port' => env('MAIL_PORT', 2525),
-            'username' => env('MAIL_USERNAME'),
-            'password' => env('MAIL_PASSWORD'),
+            'scheme' => env('UPM_MAIL_SCHEME', env('MAIL_SCHEME')),
+            'url' => env('UPM_MAIL_URL', env('MAIL_URL')),
+            'host' => env('UPM_MAIL_HOST', env('MAIL_HOST', '127.0.0.1')),
+            'port' => env('UPM_MAIL_PORT', env('MAIL_PORT', 2525)),
+            'username' => env('UPM_MAIL_USERNAME', env('MAIL_USERNAME')),
+            'password' => env('UPM_MAIL_PASSWORD', env('MAIL_PASSWORD')),
             'timeout' => null,
-            'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
+            'local_domain' => env('UPM_MAIL_EHLO_DOMAIN', env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST))),
         ],
 
         'ses' => [
@@ -111,8 +111,8 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-        'name' => env('MAIL_FROM_NAME', 'Example'),
+        'address' => env('UPM_MAIL_FROM_ADDRESS', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
+        'name' => env('UPM_MAIL_FROM_NAME', env('MAIL_FROM_NAME', 'Example')),
     ],
 
 ];

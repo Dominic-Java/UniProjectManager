@@ -124,16 +124,23 @@
                             </form>
                         </td>
                         <td>
-                            @if($user->id === auth()->id())
-                                <span class="muted">cont curent</span>
-                            @else
-                                <form method="POST" action="{{ route('settings.users.destroy', $user) }}">
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                <form method="POST" action="{{ route('settings.users.password-reset-link', $user) }}">
                                     @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-danger"
-                                            onclick="return confirm('Stergi utilizatorul?')">Sterge</button>
+                                    <button type="submit" class="btn btn-secondary">Trimite resetare parola</button>
                                 </form>
-                            @endif
+
+                                @if($user->id === auth()->id())
+                                    <span class="muted">cont curent</span>
+                                @else
+                                    <form method="POST" action="{{ route('settings.users.destroy', $user) }}">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-danger"
+                                                onclick="return confirm('Stergi utilizatorul?')">Sterge</button>
+                                    </form>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @endforeach

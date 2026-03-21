@@ -12,6 +12,9 @@
             @if (session('success'))
                 <div class="notice success" style="margin-bottom:12px;">{{ session('success') }}</div>
             @endif
+            @if (session('error'))
+                <div class="notice error" style="margin-bottom:12px;">{{ session('error') }}</div>
+            @endif
             @if ($errors->any())
                 <div class="notice error" style="margin-bottom:12px;">{{ $errors->first() }}</div>
             @endif
@@ -31,6 +34,7 @@
                     </thead>
                     <tbody>
                     @foreach($deliverables as $del)
+                        @php($locked = $del->project?->isLocked())
                         <tr>
                             <td>{{ $del->title }}</td>
                             <td>{{ $del->project?->title ?? '-' }}</td>
@@ -40,12 +44,16 @@
                                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                                     <a class="btn btn-secondary" href="{{ route('deliverables.show', $del) }}">Detalii</a>
                                     @if(auth()->user()?->hasRole('profesor'))
-                                        <a class="btn btn-secondary" href="{{ route('deliverables.edit', $del) }}">Editeaza</a>
-                                        <form method="POST" action="{{ route('deliverables.destroy', $del) }}">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-danger" onclick="return confirm('Stergi livrabilul?')">Sterge</button>
-                                        </form>
+                                        @if(!$locked)
+                                            <a class="btn btn-secondary" href="{{ route('deliverables.edit', $del) }}">Editeaza</a>
+                                            <form method="POST" action="{{ route('deliverables.destroy', $del) }}">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-danger" onclick="return confirm('Stergi livrabilul?')">Sterge</button>
+                                            </form>
+                                        @else
+                                            <span class="muted">Proiect inchis</span>
+                                        @endif
                                     @endif
                                 </div>
                             </td>
@@ -62,7 +70,7 @@
                 <p class="muted">Creeaza un livrabil nou pentru proiect.</p>
                 <a class="btn btn-primary" href="{{ route('deliverables.create') }}">Creeaza livrabil</a>
             @else
-                <p class="muted">Studentii pot doar consulta livrabilele.</p>
+                <p class="muted">Deschide un livrabil din lista ca sa incarci fisierul tau.</p>
             @endif
         </div>
     </section>

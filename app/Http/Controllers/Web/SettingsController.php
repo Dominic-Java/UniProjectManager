@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Auth\PasswordResetService;
 use App\Services\Security\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -71,6 +72,25 @@ class SettingsController extends Controller
         ]);
 
         return back()->with('success', 'Rolul a fost actualizat.');
+    }
+
+    public function sendPasswordResetLink(Request $request, User $user, PasswordResetService $passwordResetService): RedirectResponse
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        if (!$user->is_active) {
+            return back()->withErrors(['user' => 'Utilizatorul este dezactivat. Activeaza contul inainte de resetare.']);
+        }
+
+        try {
+            $passwordResetService->sendResetLink($user, $request->user());
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return back()->withErrors(['user' => 'Nu am putut trimite emailul de resetare. Verifica setarile SMTP.']);
+        }
+
+        return back()->with('success', 'Linkul de resetare a fost trimis catre ' . $user->email . '.');
     }
 
     public function destroy(Request $request, User $user): RedirectResponse

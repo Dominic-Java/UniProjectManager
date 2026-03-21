@@ -1,55 +1,99 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
+
+@push('head')
+<style>
+    .student-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+    }
+    .student-action {
+        border: 1px solid rgba(249, 115, 22, 0.18);
+        border-radius: 14px;
+        background: #fff7ed;
+        padding: 14px;
+    }
+    @media (max-width: 900px) {
+        .student-actions { grid-template-columns: 1fr; }
+    }
+</style>
+@endpush
 
 @section('content')
     <section class="hero">
         <div class="pill">Student</div>
         <h1>{{ $subtitle }}</h1>
-        <p>Tot ce ai nevoie pentru a lucra organizat pe proiecte si livrabile.</p>
+        <p>Bine ai revenit! Aici vezi clar ce ai de facut si ce urmeaza.</p>
     </section>
 
     <section class="grid">
-        <div class="card span-8" style="background:linear-gradient(120deg,#ffffff 0%, #eef6ff 60%, #fef3f2 100%);">
-            <h3>Prioritati pe termen scurt</h3>
+        <div class="card span-8" style="background:linear-gradient(120deg,#fff7ed 0%, #ffedd5 58%, #fed7aa 100%);">
+            <h3>Planul tau de lucru</h3>
             <ul>
                 @foreach($highlights as $item)
                     <li>{{ $item }}</li>
                 @endforeach
             </ul>
-            <p class="muted">Vei vedea aici deadline-urile si livrabilele imediat ce sunt conectate.</p>
+            <p class="muted">Ramai aproape de echipa si urmareste termenele din proiect.</p>
         </div>
 
         <div class="card span-4">
-            <h3>Tip cont</h3>
+            <h3>Contul tau</h3>
             <p class="muted">Rolul tau este <strong>Student</strong>.</p>
             <div class="notice" style="margin-top:10px;">
-                Domenii publice acceptate: 
-                <strong>{{ implode(', ', config('uniprojectmanager.student_domains', [])) ?: 'neconfigurat' }}</strong>
+                Conturile sunt create de administrator, nu prin inregistrare publica.
             </div>
             <p class="muted" style="margin-top:8px;">
-                Domenii institutionale: <strong>{{ implode(', ', config('uniprojectmanager.institutional_domains', [])) ?: 'neconfigurat' }}</strong>
+                Pentru acces nou sau schimbari de rol, contacteaza profesorul/adminul responsabil.
             </p>
         </div>
 
-        <div class="card span-7">
-            <h3>Actiuni rapide</h3>
-            <div style="display:flex;flex-wrap:wrap;gap:10px;">
+        <div class="card span-12">
+            <h3>Proiectele tale</h3>
+            @if(empty($recent_projects))
+                <div class="notice">Nu esti inca intr-un proiect activ. Verifica invitatiile de echipa.</div>
+            @else
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Proiect</th>
+                        <th>Materie</th>
+                        <th>Status</th>
+                        <th>Deadline</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach($recent_projects as $project)
+                        <tr>
+                            <td>{{ $project['title'] }}</td>
+                            <td>{{ $project['subject'] ?: '-' }}</td>
+                            <td>{{ $project['status'] }}</td>
+                            <td>{{ $project['deadline_at'] ?? '-' }}</td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            @endif
+        </div>
+
+        <div class="card span-12">
+            <h3>Intra rapid unde ai nevoie</h3>
+            <div class="student-actions">
                 @foreach($actions as $a)
-                    <a class="btn btn-primary" href="{{ $a['href'] }}">{{ $a['label'] }}</a>
+                    <div class="student-action">
+                        <strong>{{ $a['label'] }}</strong>
+                        <div style="margin-top:10px;">
+                            <a class="btn btn-primary" href="{{ $a['href'] }}">Deschide</a>
+                        </div>
+                    </div>
                 @endforeach
             </div>
-            <p class="muted" style="margin-top:10px;">Ai acces doar la modulele studentesti.</p>
         </div>
 
-        <div class="card span-5">
-            <h3>Recomandare</h3>
-            <p class="muted">Mentine echipa actualizata si urmareste deadline-urile din livrabile.</p>
-            <a class="btn btn-secondary" href="{{ route('teams.index') }}">Echipa mea</a>
-        </div>
-
-        <div class="card span-12" style="background:#0f172a;color:#e2e8f0;">
-            <strong>Flux student:</strong>
+        <div class="card span-12" style="background:#7c2d12;color:#ffedd5;">
+            <strong>Flux student simplu:</strong>
             <div style="margin-top:8px;">
-                Alatura-te unei echipe &rarr; urmareste milestones &rarr; trimite livrabile &rarr; primeste feedback.
+                Alatura-te unei echipe -> urmareste milestones -> trimite livrabile -> primeste feedback.
             </div>
         </div>
     </section>
