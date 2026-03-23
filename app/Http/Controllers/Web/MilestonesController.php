@@ -6,15 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\Milestone;
 use App\Models\Project;
 use App\Services\Security\AuditLogger;
+use App\Support\ClassroomAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class MilestonesController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $milestones = Milestone::with('project')
+        $milestones = Milestone::with('project.classroom')
+            ->whereHas('project', fn ($query) => ClassroomAccess::scopeVisibleProjects($query, $request->user()))
             ->orderByDesc('created_at')
             ->get();
 
@@ -30,8 +32,10 @@ class MilestonesController extends Controller
 
         return view('milestones.create', [
             'title' => 'Creeaza milestone',
-            'projects' => Project::query()
-                ->openForParticipation()
+            'projects' => ClassroomAccess::scopeManageableProjects(
+                Project::query()->openForParticipation(),
+                auth()->user()
+            )
                 ->orderByDesc('created_at')
                 ->get(),
         ]);
@@ -50,6 +54,7 @@ class MilestonesController extends Controller
         ]);
 
         $project = Project::findOrFail($validated['project_id']);
+        abort_unless(ClassroomAccess::canManageProject($request->user(), $project), 403);
         if ($project->isLocked()) {
             return back()
                 ->withInput()
@@ -72,7 +77,8 @@ class MilestonesController extends Controller
 
     public function show(Milestone $milestone): View
     {
-        $milestone->load(['project', 'createdBy', 'deliverables']);
+        $milestone->load(['project.classroom', 'createdBy', 'deliverables']);
+        abort_unless($milestone->project && ClassroomAccess::canAccessProject(request()->user(), $milestone->project), 403);
 
         return view('milestones.show', [
             'title' => 'Detalii milestone',
@@ -83,6 +89,7 @@ class MilestonesController extends Controller
     public function edit(Milestone $milestone): View|RedirectResponse
     {
         abort_unless(auth()->user()?->hasRole('profesor'), 403);
+        abort_unless($milestone->project && ClassroomAccess::canManageProject(auth()->user(), $milestone->project), 403);
 
         $milestone->loadMissing('project');
         if ($milestone->project?->isLocked()) {
@@ -94,11 +101,14 @@ class MilestonesController extends Controller
         return view('milestones.edit', [
             'title' => 'Editeaza milestone',
             'milestone' => $milestone,
-            'projects' => Project::query()
-                ->where(function ($query) use ($milestone) {
-                    $query->openForParticipation()
-                        ->orWhere('id', $milestone->project_id);
-                })
+            'projects' => ClassroomAccess::scopeManageableProjects(
+                Project::query()
+                    ->where(function ($query) use ($milestone) {
+                        $query->openForParticipation()
+                            ->orWhere('id', $milestone->project_id);
+                    }),
+                auth()->user()
+            )
                 ->orderByDesc('created_at')
                 ->get(),
         ]);
@@ -117,6 +127,7 @@ class MilestonesController extends Controller
         ]);
 
         $project = Project::findOrFail($validated['project_id']);
+        abort_unless(ClassroomAccess::canManageProject($request->user(), $project), 403);
         if ($project->isLocked()) {
             return back()
                 ->withInput()
@@ -132,6 +143,7 @@ class MilestonesController extends Controller
     public function destroy(Milestone $milestone): RedirectResponse
     {
         abort_unless(request()->user()?->hasRole('profesor'), 403);
+        abort_unless($milestone->project && ClassroomAccess::canManageProject(request()->user(), $milestone->project), 403);
 
         $milestone->loadMissing('project');
         if ($milestone->project?->isLocked()) {

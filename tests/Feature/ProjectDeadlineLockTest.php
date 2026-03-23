@@ -20,6 +20,8 @@ class ProjectDeadlineLockTest extends TestCase
     {
         parent::setUp();
 
+        config(['uniprojectmanager.expired_project_retention_hours' => 24]);
+
         $this->withoutMiddleware([
             VerifyCsrfToken::class,
             ValidateCsrfToken::class,
@@ -50,6 +52,34 @@ class ProjectDeadlineLockTest extends TestCase
             ->assertOk();
 
         $this->assertSame('closed', $project->fresh()->status);
+    }
+
+    public function test_project_is_automatically_deleted_after_retention_window(): void
+    {
+        config(['uniprojectmanager.expired_project_retention_hours' => 24]);
+
+        $professor = User::factory()->create(['role' => 'profesor']);
+
+        $project = Project::create([
+            'title' => 'Proiect pentru stergere',
+            'description' => 'Descriere',
+            'status' => 'open',
+            'visibility' => 'public',
+            'min_team_size' => 1,
+            'max_team_size' => 4,
+            'start_date' => Carbon::now()->subDays(10)->toDateString(),
+            'end_date' => Carbon::now()->addDays(10)->toDateString(),
+            'deadline_at' => Carbon::now()->subHours(25),
+            'created_by' => $professor->id,
+        ]);
+
+        $this->actingAs($professor)
+            ->get(route('projects.index'))
+            ->assertOk();
+
+        $this->assertDatabaseMissing('projects', [
+            'id' => $project->id,
+        ]);
     }
 
     public function test_cannot_send_team_invitation_when_project_is_closed_by_deadline(): void

@@ -8,6 +8,7 @@ use App\Models\DeliverableSubmission;
 use App\Models\Milestone;
 use App\Models\Project;
 use App\Services\Security\AuditLogger;
+use App\Support\ClassroomAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -17,9 +18,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DeliverablesController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
         $deliverables = Deliverable::with(['project', 'milestone'])
+            ->whereHas('project', fn ($query) => ClassroomAccess::scopeVisibleProjects($query, $request->user()))
             ->orderByDesc('created_at')
             ->get();
 
@@ -35,12 +37,17 @@ class DeliverablesController extends Controller
 
         return view('deliverables.create', [
             'title' => 'Creeaza livrabil',
-            'projects' => Project::query()
-                ->openForParticipation()
+            'projects' => ClassroomAccess::scopeManageableProjects(
+                Project::query()->openForParticipation(),
+                auth()->user()
+            )
                 ->orderByDesc('created_at')
                 ->get(),
             'milestones' => Milestone::query()
-                ->whereHas('project', fn ($query) => $query->openForParticipation())
+                ->whereHas('project', function ($query): void {
+                    $query->openForParticipation();
+                    ClassroomAccess::scopeManageableProjects($query, auth()->user());
+                })
                 ->orderByDesc('created_at')
                 ->get(),
         ]);
@@ -61,6 +68,7 @@ class DeliverablesController extends Controller
         ]);
 
         $project = Project::findOrFail($validated['project_id']);
+        abort_unless(ClassroomAccess::canManageProject($request->user(), $project), 403);
         if ($project->isLocked()) {
             return back()
                 ->withInput()
@@ -92,7 +100,9 @@ class DeliverablesController extends Controller
 
     public function show(Deliverable $deliverable): View
     {
-        $deliverable->load(['project', 'milestone', 'createdBy', 'submissions.student']);
+        $deliverable->load(['project.classroom', 'milestone', 'createdBy', 'submissions.student']);
+        abort_unless($deliverable->project && ClassroomAccess::canAccessProject(auth()->user(), $deliverable->project), 403);
+
         $mySubmission = null;
 
         if (auth()->user()?->hasRole('student')) {
@@ -116,6 +126,7 @@ class DeliverablesController extends Controller
         if (!$deliverable->project) {
             return back()->with('error', 'Livrabilul nu are proiect asociat.');
         }
+        abort_unless(ClassroomAccess::canAccessProject($request->user(), $deliverable->project), 403);
 
         if ($deliverable->project->isLocked()) {
             return back()->with('error', 'Proiectul este inchis dupa deadline. Nu mai poti incarca livrabilul.');
@@ -177,8 +188,11 @@ class DeliverablesController extends Controller
     public function downloadSubmission(Request $request, DeliverableSubmission $submission): StreamedResponse|RedirectResponse
     {
         $user = $request->user();
-
-        $canDownload = $user?->hasRole('profesor') || $submission->student_user_id === $user?->id;
+        $submission->loadMissing('project.classroom');
+        $canDownload = $submission->student_user_id === $user?->id;
+        if ($user?->hasRole('profesor') && $submission->project) {
+            $canDownload = ClassroomAccess::canManageProject($user, $submission->project);
+        }
         if (!$canDownload) {
             abort(403);
         }
@@ -204,6 +218,9 @@ class DeliverablesController extends Controller
         }
 
         $submission->loadMissing('project');
+        if (!$submission->project || !ClassroomAccess::canAccessProject($user, $submission->project)) {
+            abort(403);
+        }
         if ($submission->project?->isLocked()) {
             return back()->with('error', 'Proiectul este inchis dupa deadline. Nu mai poti anula predarea.');
         }
@@ -226,6 +243,7 @@ class DeliverablesController extends Controller
     public function edit(Deliverable $deliverable): View|RedirectResponse
     {
         abort_unless(auth()->user()?->hasRole('profesor'), 403);
+        abort_unless($deliverable->project && ClassroomAccess::canManageProject(auth()->user(), $deliverable->project), 403);
 
         $deliverable->loadMissing('project');
         if ($deliverable->project?->isLocked()) {
@@ -237,17 +255,22 @@ class DeliverablesController extends Controller
         return view('deliverables.edit', [
             'title' => 'Editeaza livrabil',
             'deliverable' => $deliverable,
-            'projects' => Project::query()
-                ->where(function ($query) use ($deliverable) {
-                    $query->openForParticipation()
-                        ->orWhere('id', $deliverable->project_id);
-                })
+            'projects' => ClassroomAccess::scopeManageableProjects(
+                Project::query()
+                    ->where(function ($query) use ($deliverable) {
+                        $query->openForParticipation()
+                            ->orWhere('id', $deliverable->project_id);
+                    }),
+                auth()->user()
+            )
                 ->orderByDesc('created_at')
                 ->get(),
             'milestones' => Milestone::query()
                 ->where(function ($query) use ($deliverable) {
-                    $query->whereHas('project', fn ($projectQuery) => $projectQuery->openForParticipation())
-                        ->orWhere('id', $deliverable->milestone_id);
+                    $query->whereHas('project', function ($projectQuery): void {
+                        $projectQuery->openForParticipation();
+                        ClassroomAccess::scopeManageableProjects($projectQuery, auth()->user());
+                    })->orWhere('id', $deliverable->milestone_id);
                 })
                 ->orderByDesc('created_at')
                 ->get(),
@@ -269,6 +292,7 @@ class DeliverablesController extends Controller
         ]);
 
         $project = Project::findOrFail($validated['project_id']);
+        abort_unless(ClassroomAccess::canManageProject($request->user(), $project), 403);
         if ($project->isLocked()) {
             return back()
                 ->withInput()
@@ -300,6 +324,7 @@ class DeliverablesController extends Controller
     public function destroy(Deliverable $deliverable): RedirectResponse
     {
         abort_unless(request()->user()?->hasRole('profesor'), 403);
+        abort_unless($deliverable->project && ClassroomAccess::canManageProject(request()->user(), $deliverable->project), 403);
 
         $deliverable->loadMissing('project');
         if ($deliverable->project?->isLocked()) {

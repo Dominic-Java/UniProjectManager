@@ -2,9 +2,9 @@
 
 @section('content')
     <section class="hero">
-        <div class="pill">Classroom nou</div>
-        <h1>Creeaza classroom pe materie</h1>
-        <p>Configureaza proiectul si regulile de echipa pentru materia predata.</p>
+        <div class="pill">Proiect nou</div>
+        <h1>Creeaza proiect in classroom</h1>
+        <p>Selecteaza clasa existenta, iar materia va fi preluata automat.</p>
     </section>
 
     <section class="grid">
@@ -18,8 +18,29 @@
                 </div>
             @endif
 
+            @if($classrooms->count() === 0)
+                <div class="notice error">
+                    Nu ai classroom-uri create. Creeaza mai intai o clasa pe materie.
+                    <div style="margin-top:10px;">
+                        <a class="btn btn-primary" href="{{ route('classrooms.create') }}">Creeaza classroom</a>
+                    </div>
+                </div>
+            @else
+
             <form method="POST" action="{{ route('projects.store') }}">
                 @csrf
+
+                <div style="margin-bottom:12px;">
+                    <label class="muted">Classroom</label>
+                    <select name="classroom_id" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);" required>
+                        <option value="">-- alege classroom --</option>
+                        @foreach($classrooms as $classroom)
+                            <option value="{{ $classroom->id }}" @selected(old('classroom_id', $selected_classroom_id) == $classroom->id)>
+                                {{ $classroom->name }} - {{ $classroom->subject }} ({{ $classroom->code }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
 
                 <div style="margin-bottom:12px;">
                     <label class="muted">Titlu proiect</label>
@@ -34,11 +55,6 @@
                 <div style="margin-bottom:12px;">
                     <label class="muted">Descriere</label>
                     <textarea name="description" rows="4" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);" required>{{ old('description') }}</textarea>
-                </div>
-
-                <div style="margin-bottom:12px;">
-                    <label class="muted">Materie / disciplina</label>
-                    <input type="text" name="domain" value="{{ old('domain') }}" placeholder="Ex: Ingineria Programarii" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);" required>
                 </div>
 
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;">
@@ -92,12 +108,13 @@
                     <a href="{{ route('projects.index') }}" class="btn btn-secondary">Inapoi la lista</a>
                 </div>
             </form>
+            @endif
         </div>
 
         <div class="card span-4">
             <h3>Recomandari</h3>
             <ul>
-                <li>Completeaza materia ca studentii sa stie clar contextul.</li>
+                <li>Alege clasa corecta, materia vine direct din classroom.</li>
                 <li>Seteaza dimensiunea minima/maxima a echipei.</li>
                 <li>Adauga deadline-ul de inchidere pentru blocare automata.</li>
             </ul>

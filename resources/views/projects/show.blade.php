@@ -29,6 +29,18 @@
                     <td>{{ $project->domain ?? '-' }}</td>
                 </tr>
                 <tr>
+                    <th>Classroom</th>
+                    <td>
+                        @if($project->classroom)
+                            <a href="{{ route('classrooms.show', $project->classroom) }}">
+                                {{ $project->classroom->name }} ({{ $project->classroom->code }})
+                            </a>
+                        @else
+                            -
+                        @endif
+                    </td>
+                </tr>
+                <tr>
                     <th>Status</th>
                     <td>{{ $project->status }}</td>
                 </tr>
@@ -59,7 +71,7 @@
         <div class="card span-4">
             <h3>Actiuni</h3>
             <div style="display:flex;flex-direction:column;gap:8px;">
-                @if(auth()->user()?->hasRole('profesor'))
+                @if($can_manage)
                     <a class="btn btn-secondary" href="{{ route('projects.edit', $project) }}">Editeaza proiect</a>
                 @endif
                 <a class="btn btn-secondary" href="{{ route('projects.index') }}">Inapoi la lista</a>
@@ -100,7 +112,7 @@
             <h3>Classwork - Materiale</h3>
             <p class="muted">Aici poti adauga suport de curs, exemple, cerinte sau alte resurse pentru echipe.</p>
 
-            @if(auth()->user()?->hasRole('profesor'))
+            @if($can_upload_materials)
                 @if($project->isLocked())
                     <div class="notice error" style="margin-bottom:12px;">
                         Proiectul este inchis dupa deadline. Nu mai poti incarca materiale noi.
@@ -148,7 +160,7 @@
                             <td>
                                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                                     <a class="btn btn-secondary btn-sm" href="{{ route('projects.materials.download', $material) }}">Descarca</a>
-                                    @if(auth()->user()?->hasRole('profesor') && !$project->isLocked())
+                                    @if($can_upload_materials && !$project->isLocked())
                                         <form method="POST" action="{{ route('projects.materials.destroy', $material) }}">
                                             @csrf
                                             @method('DELETE')

@@ -14,6 +14,10 @@
         box-shadow: var(--shadow);
         padding: clamp(22px, 4vw, 40px);
     }
+    body[data-theme="dark"] .landing-hero {
+        border-color: #475569;
+        background: linear-gradient(145deg, #0f172a 0%, #1e293b 60%, #334155 100%);
+    }
     .landing-hero h1 {
         margin: 8px 0 10px;
         font-size: clamp(28px, 4.2vw, 52px);
@@ -42,6 +46,10 @@
         background: #fffdfa;
         padding: 20px;
     }
+    body[data-theme="dark"] .benefit-card {
+        border-color: #475569;
+        background: rgba(15, 23, 42, 0.55);
+    }
     .benefit-card h3 {
         margin: 0 0 8px;
         font-size: 20px;
@@ -55,6 +63,10 @@
         border: 1px solid rgba(251, 146, 60, 0.18);
         background: #fffaf4;
         padding: 22px;
+    }
+    body[data-theme="dark"] .steps-card {
+        border-color: #475569;
+        background: rgba(15, 23, 42, 0.55);
     }
     .steps-card h2 {
         margin: 0 0 14px;
@@ -84,6 +96,16 @@
     .final-cta .btn-secondary {
         background: #fff7ed;
         color: #9a3412;
+    }
+    body[data-theme="dark"] .final-cta {
+        border-color: #475569;
+        background: linear-gradient(140deg, #0b1328 0%, #1e293b 100%);
+        color: #dbeafe;
+    }
+    body[data-theme="dark"] .final-cta .btn-secondary {
+        background: #1e293b;
+        color: #e2e8f0;
+        border: 1px solid #475569;
     }
     @media (max-width: 960px) {
         .benefits-grid {

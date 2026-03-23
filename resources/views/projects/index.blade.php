@@ -17,59 +17,135 @@
                 <div class="notice">
                     Tabela projects nu exista in baza de date. Spune-mi structura (coloane) si o conectam.
                 </div>
-            @elseif (count($projects) === 0)
+            @elseif (count($active_projects) === 0 && count($archived_projects) === 0)
                 <div class="notice">
                     Nu exista proiecte inregistrate inca.
                 </div>
             @else
-                <table class="table">
-                    <thead>
-                    <tr>
-                        <th>Titlu</th>
-                        <th>Materie</th>
-                        <th>Status</th>
-                        <th>Deadline</th>
-                        <th>Start</th>
-                        <th>End</th>
-                        <th>Creat</th>
-                        <th>Actiuni</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @foreach($projects as $project)
+                <h3>Proiecte active</h3>
+                @if(count($active_projects) === 0)
+                    <div class="notice" style="margin-bottom:16px;">Nu exista proiecte active.</div>
+                @else
+                    <table class="table" style="margin-bottom:16px;">
+                        <thead>
                         <tr>
-                            <td>{{ $project['title'] }}</td>
-                            <td>{{ $project['domain'] ?? '-' }}</td>
-                            <td>{{ $project['status'] }}</td>
-                            <td>{{ $project['deadline_at'] ?? '-' }}</td>
-                            <td>{{ $project['start_date'] ?? '-' }}</td>
-                            <td>{{ $project['end_date'] ?? '-' }}</td>
-                            <td>{{ $project['created_at'] ?? '-' }}</td>
-                            <td>
-                                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                                    <a class="btn btn-secondary" href="{{ route('projects.show', $project['id']) }}">Detalii</a>
-                                    @if(auth()->user()?->hasRole('profesor'))
-                                        <a class="btn btn-secondary" href="{{ route('projects.edit', $project['id']) }}">Editeaza</a>
-                                        <form method="POST" action="{{ route('projects.destroy', $project['id']) }}">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-danger" onclick="return confirm('Stergi proiectul?')">Sterge</button>
-                                        </form>
-                                    @endif
-                                </div>
-                            </td>
+                            <th>Titlu</th>
+                            <th>Classroom</th>
+                            <th>Materie</th>
+                            <th>Status</th>
+                            <th>Deadline</th>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th>Creat</th>
+                            <th>Actiuni</th>
                         </tr>
-                    @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                        @foreach($active_projects as $project)
+                            <tr>
+                                <td>{{ $project['title'] }}</td>
+                                <td>
+                                    @if(!empty($project['classroom']))
+                                        {{ $project['classroom'] }}
+                                        @if(!empty($project['classroom_code']))
+                                            ({{ $project['classroom_code'] }})
+                                        @endif
+                                    @else
+                                        -
+                                    @endif
+                                </td>
+                                <td>{{ $project['domain'] ?? '-' }}</td>
+                                <td>{{ $project['status'] }}</td>
+                                <td>{{ $project['deadline_at'] ?? '-' }}</td>
+                                <td>{{ $project['start_date'] ?? '-' }}</td>
+                                <td>{{ $project['end_date'] ?? '-' }}</td>
+                                <td>{{ $project['created_at'] ?? '-' }}</td>
+                                <td>
+                                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                        <a class="btn btn-secondary" href="{{ route('projects.show', $project['id']) }}">Detalii</a>
+                                        @if(auth()->user()?->hasRole('profesor'))
+                                            <a class="btn btn-secondary" href="{{ route('projects.edit', $project['id']) }}">Editeaza</a>
+                                            <form method="POST" action="{{ route('projects.destroy', $project['id']) }}">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-danger" onclick="return confirm('Stergi proiectul?')">Sterge</button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                @endif
+
+                <h3>Arhivate</h3>
+                @if(count($archived_projects) === 0)
+                    <div class="notice">Nu exista proiecte arhivate.</div>
+                @else
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <th>Titlu</th>
+                            <th>Classroom</th>
+                            <th>Materie</th>
+                            <th>Status</th>
+                            <th>Deadline</th>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th>Creat</th>
+                            <th>Actiuni</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach($archived_projects as $project)
+                            <tr>
+                                <td>{{ $project['title'] }}</td>
+                                <td>
+                                    @if(!empty($project['classroom']))
+                                        {{ $project['classroom'] }}
+                                        @if(!empty($project['classroom_code']))
+                                            ({{ $project['classroom_code'] }})
+                                        @endif
+                                    @else
+                                        -
+                                    @endif
+                                </td>
+                                <td>{{ $project['domain'] ?? '-' }}</td>
+                                <td>{{ $project['status'] }}</td>
+                                <td>{{ $project['deadline_at'] ?? '-' }}</td>
+                                <td>{{ $project['start_date'] ?? '-' }}</td>
+                                <td>{{ $project['end_date'] ?? '-' }}</td>
+                                <td>{{ $project['created_at'] ?? '-' }}</td>
+                                <td>
+                                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                        <a class="btn btn-secondary" href="{{ route('projects.show', $project['id']) }}">Detalii</a>
+                                        @if(auth()->user()?->hasRole('profesor'))
+                                            <a class="btn btn-secondary" href="{{ route('projects.edit', $project['id']) }}">Editeaza</a>
+                                            <form method="POST" action="{{ route('projects.destroy', $project['id']) }}">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-danger" onclick="return confirm('Stergi proiectul?')">Sterge</button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                @endif
             @endif
         </div>
 
         <div class="card span-4">
             <h3>Actiuni</h3>
-            <p class="muted">Creeaza proiecte si urmareste starea lor.</p>
+            <p class="muted">Gestioneaza mai intai classroom-urile, apoi proiectele din fiecare clasa.</p>
             @if(auth()->user()?->hasRole('profesor'))
-                <a class="btn btn-primary" href="{{ route('projects.create') }}">Creeaza proiect</a>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    <a class="btn btn-primary" href="{{ route('classrooms.index') }}">Deschide classroom-uri</a>
+                    <a class="btn btn-secondary" href="{{ route('projects.create') }}">Creeaza proiect</a>
+                </div>
             @else
                 <div class="notice">
                     Doar profesorii pot crea proiecte.

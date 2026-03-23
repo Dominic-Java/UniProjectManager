@@ -38,7 +38,39 @@ Artisan::command('projects:close-expired {--dry-run : Afiseaza doar cate proiect
     return self::SUCCESS;
 })->purpose('Inchide proiectele care au depasit deadline-ul');
 
+Artisan::command('projects:prune-expired {--dry-run : Afiseaza doar cate proiecte ar fi sterse}', function () {
+    if (!Schema::hasTable('projects') || !Schema::hasColumn('projects', 'deadline_at')) {
+        $this->warn('Tabela projects sau coloana deadline_at nu exista.');
+        return self::SUCCESS;
+    }
+
+    $retentionHours = max(0, (int) config('uniprojectmanager.expired_project_retention_hours', 24));
+    $pruneBefore = $retentionHours > 0 ? now()->subHours($retentionHours) : now();
+
+    $query = Project::query()
+        ->whereNotNull('deadline_at')
+        ->where('deadline_at', '<=', $pruneBefore);
+
+    $count = (clone $query)->count();
+
+    if ($this->option('dry-run')) {
+        $this->info("Dry-run: {$count} proiect(e) ar fi sterse.");
+        return self::SUCCESS;
+    }
+
+    $deleted = $query->delete();
+
+    $this->info("Au fost sterse {$deleted} proiect(e) expirate.");
+
+    return self::SUCCESS;
+})->purpose('Sterge proiectele care au depasit perioada de retentie dupa deadline');
+
 Schedule::command('projects:close-expired')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground();
+
+Schedule::command('projects:prune-expired')
     ->everyMinute()
     ->withoutOverlapping()
     ->runInBackground();

@@ -17,6 +17,10 @@
         position: relative;
         overflow: hidden;
     }
+    body[data-theme="dark"] .landing-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 58%, #334155 100%);
+        border-color: #475569;
+    }
     .landing-hero::before {
         content: "";
         position: absolute;
@@ -59,12 +63,21 @@
         font-weight: 700;
         font-size: 13px;
     }
+    body[data-theme="dark"] .landing-tag {
+        background: #1e293b;
+        border-color: #475569;
+        color: #f8fafc;
+    }
     .landing-side {
         display: grid;
         gap: 12px;
     }
     .landing-side .card {
         padding: 18px;
+    }
+    body[data-theme="dark"] .landing-side .card {
+        background: rgba(15, 23, 42, 0.55);
+        border-color: #475569;
     }
     .friendly-grid {
         display: grid;
@@ -82,6 +95,11 @@
     .friendly-step .card {
         padding: 16px;
     }
+    body[data-theme="dark"] .friendly-grid .card,
+    body[data-theme="dark"] .friendly-step .card {
+        background: rgba(15, 23, 42, 0.55);
+        border-color: #475569;
+    }
     .landing-cta {
         border-radius: 22px;
         background: linear-gradient(120deg, #8a320f, #bf4b14);
@@ -95,6 +113,15 @@
     .landing-cta .btn-secondary {
         background: #fff7ed;
         color: #9a3412;
+    }
+    body[data-theme="dark"] .landing-cta {
+        background: linear-gradient(140deg, #0b1328 0%, #1e293b 100%);
+        color: #dbeafe;
+    }
+    body[data-theme="dark"] .landing-cta .btn-secondary {
+        background: #1e293b;
+        color: #e2e8f0;
+        border: 1px solid #475569;
     }
     @media (max-width: 1000px) {
         .landing-shell {

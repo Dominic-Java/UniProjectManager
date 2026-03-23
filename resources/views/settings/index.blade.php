@@ -46,6 +46,17 @@
         </div>
 
         <div class="card span-12">
+            <h3>Tema interfata</h3>
+            <p class="muted">Poti comuta rapid intre Light si Dark mode pentru contul tau.</p>
+            <form method="POST" action="{{ route('profile.theme.toggle') }}" style="margin-top:10px;">
+                @csrf
+                <button type="submit" class="btn btn-secondary">
+                    {{ (auth()->user()->theme_preference ?? 'light') === 'dark' ? 'Comuta pe Light mode' : 'Comuta pe Dark mode' }}
+                </button>
+            </form>
+        </div>
+
+        <div class="card span-12">
             <h3>Creeaza cont</h3>
             <p class="muted">Doar administratorul poate crea conturi pentru studenti si profesori.</p>
             <form method="POST" action="{{ route('settings.users.store') }}" style="margin-top:12px;">

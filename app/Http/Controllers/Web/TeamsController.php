@@ -8,6 +8,7 @@ use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\User;
 use App\Services\Security\AuditLogger;
+use App\Support\ClassroomAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,42 +19,71 @@ class TeamsController extends Controller
 {
     public function index(Request $request): View
     {
-        $teams = Team::with('project')
+        $user = $request->user();
+        $teamsQuery = Team::with('project.classroom')
             ->withCount('members')
-            ->orderByDesc('created_at')
-            ->get();
+            ->orderByDesc('created_at');
+
+        if ($user->hasRole('profesor')) {
+            $teamsQuery->whereHas('project', fn ($query) => ClassroomAccess::scopeManageableProjects($query, $user));
+        } else {
+            $teamsQuery->where(function ($query) use ($user): void {
+                $query->whereHas('members', fn ($memberQuery) => $memberQuery->where('users.id', $user->id))
+                    ->orWhere('created_by', $user->id);
+            });
+        }
+
+        $teams = $teamsQuery->get();
 
         $invitations = TeamInvitation::with(['team.project', 'invitedBy'])
-            ->where('invited_user_id', $request->user()->id)
+            ->where('invited_user_id', $user->id)
             ->where('status', 'pending')
             ->orderByDesc('created_at')
             ->get();
+
+        $projectQuery = Project::query()->openForParticipation();
+        if ($user->hasRole('profesor')) {
+            ClassroomAccess::scopeManageableProjects($projectQuery, $user);
+        } else {
+            ClassroomAccess::scopeVisibleProjects($projectQuery, $user);
+        }
 
         return view('teams.index', [
             'title' => 'Echipe',
             'teams' => $teams,
             'invitations' => $invitations,
-            'can_create_team' => Project::query()->openForParticipation()->exists(),
+            'can_create_team' => $projectQuery->exists(),
         ]);
     }
 
     public function create(): View
     {
         $user = auth()->user();
+        $projectsQuery = Project::query()
+            ->openForParticipation()
+            ->orderByDesc('created_at');
+
+        if ($user?->hasRole('profesor')) {
+            ClassroomAccess::scopeManageableProjects($projectsQuery, $user);
+        } elseif ($user?->hasRole('student')) {
+            ClassroomAccess::scopeVisibleProjects($projectsQuery, $user);
+        }
+
+        $studentsQuery = User::query()
+            ->where('role', 'student')
+            ->orderBy('first_name')
+            ->orderBy('last_name');
+
+        if ($user?->hasRole('profesor')) {
+            // Profesorul vede lista completa; validarea finala se face pe proiect/classroom la salvare.
+        } else {
+            $studentsQuery->whereRaw('1 = 0');
+        }
 
         return view('teams.create', [
             'title' => 'Creeaza echipa',
-            'projects' => Project::query()
-                ->openForParticipation()
-                ->orderByDesc('created_at')
-                ->get(),
-            'students' => $user?->hasRole('profesor')
-                ? User::query()
-                    ->where('role', 'student')
-                    ->orderBy('first_name')
-                    ->orderBy('last_name')
-                    ->get(['id', 'first_name', 'last_name', 'email'])
-                : collect(),
+            'projects' => $projectsQuery->get(),
+            'students' => $studentsQuery->get(['id', 'first_name', 'last_name', 'email']),
         ]);
     }
 
@@ -75,6 +105,11 @@ class TeamsController extends Controller
         ]);
 
         $project = Project::findOrFail($validated['project_id']);
+        if ($request->user()->hasRole('profesor')) {
+            abort_unless(ClassroomAccess::canManageProject($request->user(), $project), 403);
+        } else {
+            abort_unless(ClassroomAccess::canAccessProject($request->user(), $project), 403);
+        }
         if ($response = $this->blockIfProjectLocked($project)) {
             return $response;
         }
@@ -95,6 +130,19 @@ class TeamsController extends Controller
                     ->withErrors(['captain_user_id' => 'Capitanul echipei trebuie sa aiba rolul student.']);
             }
 
+            if ($project->classroom_id) {
+                $captainInClassroom = DB::table('classroom_members')
+                    ->where('classroom_id', $project->classroom_id)
+                    ->where('user_id', $captain->id)
+                    ->exists();
+
+                if (!$captainInClassroom) {
+                    return back()
+                        ->withInput()
+                        ->withErrors(['captain_user_id' => 'Studentul selectat nu este inscris in classroom-ul proiectului.']);
+                }
+            }
+
             if ($this->isUserAlreadyInProjectTeam($project->id, $captain->id)) {
                 return back()
                     ->withInput()
@@ -104,6 +152,19 @@ class TeamsController extends Controller
             $leaderId = $captain->id;
         } else {
             abort_unless($request->user()->hasRole('student'), 403);
+
+            if ($project->classroom_id) {
+                $studentInClassroom = DB::table('classroom_members')
+                    ->where('classroom_id', $project->classroom_id)
+                    ->where('user_id', $request->user()->id)
+                    ->exists();
+
+                if (!$studentInClassroom) {
+                    return back()
+                        ->withInput()
+                        ->withErrors(['project_id' => 'Nu esti inscris in classroom-ul acestui proiect.']);
+                }
+            }
 
             if ($this->isUserAlreadyInProjectTeam($project->id, $request->user()->id)) {
                 return back()
@@ -135,7 +196,8 @@ class TeamsController extends Controller
 
     public function show(Team $team): View
     {
-        $team->load(['project', 'members', 'createdBy']);
+        $team->load(['project.classroom', 'members', 'createdBy']);
+        abort_unless($this->canViewTeam(request()->user(), $team), 403);
 
         $invitations = TeamInvitation::with(['invitedUser', 'invitedBy'])
             ->where('team_id', $team->id)
@@ -230,6 +292,17 @@ class TeamsController extends Controller
             return back()->withErrors(['email' => 'Echipa nu are un proiect asociat valid.']);
         }
 
+        if ($team->project->classroom_id) {
+            $inClassroom = DB::table('classroom_members')
+                ->where('classroom_id', $team->project->classroom_id)
+                ->where('user_id', $user->id)
+                ->exists();
+
+            if (!$inClassroom) {
+                return back()->withErrors(['email' => 'Studentul trebuie sa fie inscris in classroom-ul proiectului.']);
+            }
+        }
+
         $alreadyMember = DB::table('team_members')
             ->where('team_id', $team->id)
             ->where('user_id', $user->id)
@@ -303,6 +376,17 @@ class TeamsController extends Controller
                 return back()->with('error', 'Esti deja intr-o alta echipa pentru acest proiect.');
             }
 
+            if ($invitation->team->project->classroom_id) {
+                $inClassroom = DB::table('classroom_members')
+                    ->where('classroom_id', $invitation->team->project->classroom_id)
+                    ->where('user_id', $request->user()->id)
+                    ->exists();
+
+                if (!$inClassroom) {
+                    return back()->with('error', 'Trebuie sa fii inscris in classroom-ul proiectului inainte sa accepti invitatia.');
+                }
+            }
+
             if ($this->teamIsAtCapacity($invitation->team)) {
                 return back()->with('error', 'Echipa a atins numarul maxim de membri setat in proiect.');
             }
@@ -362,6 +446,18 @@ class TeamsController extends Controller
         }
         if (!$user->hasRole('student')) {
             return back()->withErrors(['email' => 'In echipe pot fi adaugati doar studenti.']);
+        }
+
+        $team->loadMissing('project');
+        if ($team->project?->classroom_id) {
+            $inClassroom = DB::table('classroom_members')
+                ->where('classroom_id', $team->project->classroom_id)
+                ->where('user_id', $user->id)
+                ->exists();
+
+            if (!$inClassroom) {
+                return back()->withErrors(['email' => 'Studentul trebuie sa fie inscris in classroom-ul proiectului.']);
+            }
         }
 
         $alreadyMember = DB::table('team_members')
@@ -428,7 +524,8 @@ class TeamsController extends Controller
         }
 
         if ($user->hasRole('profesor')) {
-            return true;
+            $team->loadMissing('project.classroom');
+            return $team->project && ClassroomAccess::canManageProject($user, $team->project);
         }
 
         if ($team->created_by === $user->id) {
@@ -440,6 +537,32 @@ class TeamsController extends Controller
             ->where('user_id', $user->id)
             ->where('role', 'leader')
             ->exists();
+    }
+
+    private function canViewTeam(?User $user, Team $team): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        if ($this->canManageTeam($user, $team)) {
+            return true;
+        }
+
+        if ($team->created_by === $user->id) {
+            return true;
+        }
+
+        if (DB::table('team_members')
+            ->where('team_id', $team->id)
+            ->where('user_id', $user->id)
+            ->exists()) {
+            return true;
+        }
+
+        $team->loadMissing('project.classroom');
+
+        return $team->project && ClassroomAccess::canAccessProject($user, $team->project);
     }
 
     private function blockIfTeamProjectLocked(Team $team): ?RedirectResponse

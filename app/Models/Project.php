@@ -18,6 +18,7 @@ class Project extends Model
         'title',
         'description',
         'domain',
+        'classroom_id',
         'status',
         'visibility',
         'max_team_size',
@@ -39,6 +40,11 @@ class Project extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function classroom(): BelongsTo
+    {
+        return $this->belongsTo(Classroom::class, 'classroom_id');
     }
 
     public function teams(): HasMany

@@ -6,17 +6,31 @@ use App\Mail\NewProjectCreatedMail;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\Security\AuditLogger;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
 class ProjectNotificationService
 {
     public function notifyProjectCreated(Project $project, User $creator): int
     {
-        $recipients = User::query()
-            ->where('id', '!=', $creator->id)
-            ->where('is_active', true)
-            ->whereIn('role', ['student', 'profesor'])
-            ->get(['id', 'email']);
+        if ($project->classroom_id) {
+            $memberIds = DB::table('classroom_members')
+                ->where('classroom_id', $project->classroom_id)
+                ->pluck('user_id')
+                ->toArray();
+
+            $recipients = User::query()
+                ->whereIn('id', $memberIds)
+                ->where('id', '!=', $creator->id)
+                ->where('is_active', true)
+                ->get(['id', 'email']);
+        } else {
+            $recipients = User::query()
+                ->where('id', '!=', $creator->id)
+                ->where('is_active', true)
+                ->whereIn('role', ['student', 'profesor'])
+                ->get(['id', 'email']);
+        }
 
         foreach ($recipients as $recipient) {
             Mail::to($recipient->email)->send(new NewProjectCreatedMail($project, $creator));

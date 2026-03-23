@@ -52,7 +52,18 @@ class AuthController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
-        $user->update(['last_login_at' => now()]);
+
+        $updates = ['last_login_at' => now()];
+        $cookieTheme = $this->resolveThemeFromRequest($request);
+        if (
+            Schema::hasColumn('users', 'theme_preference')
+            && $cookieTheme !== null
+            && ($user->theme_preference ?? 'light') !== $cookieTheme
+        ) {
+            $updates['theme_preference'] = $cookieTheme;
+        }
+
+        $user->update($updates);
         AuditLogger::log('auth.login', $user, 'user', $user->id);
 
         return redirect()->intended(route('dashboard'));
@@ -93,6 +104,7 @@ class AuthController extends Controller
             'password_hash' => Hash::make($validated['password']),
             'role' => $validated['role'],
             'member_code' => User::generateMemberCode($validated['role']),
+            'theme_preference' => $this->resolveThemeFromRequest($request) ?? 'light',
         ]);
         Auth::login($user);
         $request->session()->regenerate();
@@ -251,5 +263,28 @@ class AuthController extends Controller
         }
 
         return 'Emailul trebuie sa fie dintr-un domeniu valid pentru studenti.';
+    }
+
+    private function resolveThemeFromRequest(Request $request): ?string
+    {
+        $fromCookieBag = strtolower(trim((string) $request->cookie('upm_theme', '')));
+        $fromCookieBag = trim($fromCookieBag, "\"' ");
+        if (in_array($fromCookieBag, ['light', 'dark'], true)) {
+            return $fromCookieBag;
+        }
+
+        $rawCookieHeader = (string) $request->server('HTTP_COOKIE', '');
+        if ($rawCookieHeader === '') {
+            return null;
+        }
+
+        if (!preg_match('/(?:^|;\\s*)upm_theme=([^;]+)/', $rawCookieHeader, $matches)) {
+            return null;
+        }
+
+        $rawValue = strtolower(urldecode(trim((string) ($matches[1] ?? ''))));
+        $rawValue = trim($rawValue, "\"' ");
+
+        return in_array($rawValue, ['light', 'dark'], true) ? $rawValue : null;
     }
 }

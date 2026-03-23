@@ -65,6 +65,14 @@
                     </div>
                 </div>
 
+                <div style="margin-bottom:12px;">
+                    <label class="label" for="theme_preference">Tema interfata</label>
+                    <select class="input" id="theme_preference" name="theme_preference">
+                        <option value="light" @selected(old('theme_preference', $user->theme_preference ?? 'light') === 'light')>Light</option>
+                        <option value="dark" @selected(old('theme_preference', $user->theme_preference ?? 'light') === 'dark')>Dark</option>
+                    </select>
+                </div>
+
                 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px;">
                     <div>
                         <label class="label" for="city">Localitate</label>

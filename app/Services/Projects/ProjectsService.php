@@ -2,21 +2,45 @@
 
 namespace App\Services\Projects;
 
+use App\Models\Project;
+use App\Models\User;
 use App\Repositories\Projects\ProjectsRepository;
+use App\Support\ClassroomAccess;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 class ProjectsService
 {
     public function __construct(private ProjectsRepository $repo) {}
 
-    public function getIndexData(): array
+    public function getIndexData(?User $user): array
     {
-        $projects = $this->repo->listProjects();
+        if (!$this->repo->tableExists() || !$user) {
+            return [
+                'title' => 'Proiecte',
+                'table_exists' => $this->repo->tableExists(),
+                'projects' => [],
+                'active_projects' => [],
+                'archived_projects' => [],
+            ];
+        }
+
+        $query = Project::query()
+            ->with('classroom')
+            ->orderByDesc('created_at');
+
+        ClassroomAccess::scopeVisibleProjects($query, $user);
+        $projects = $query->get();
+
+        $normalized = $this->normalizeProjects($projects);
+        [$activeProjects, $archivedProjects] = $this->splitProjectsByState($normalized);
 
         return [
             'title' => 'Proiecte',
             'table_exists' => $this->repo->tableExists(),
-            'projects' => $this->normalizeProjects($projects),
+            'projects' => $normalized,
+            'active_projects' => $activeProjects,
+            'archived_projects' => $archivedProjects,
         ];
     }
 
@@ -31,6 +55,7 @@ class ProjectsService
             'title' => $data['title'] ?? null,
             'description' => $data['description'] ?? '',
             'domain' => $data['domain'] ?? null,
+            'classroom_id' => $data['classroom_id'] ?? null,
             'visibility' => $data['visibility'] ?? 'public',
             'start_date' => $data['start_date'] ?? null,
             'end_date' => $data['end_date'] ?? null,
@@ -46,24 +71,45 @@ class ProjectsService
         return $this->repo->create($payload);
     }
 
-    private function normalizeProjects(array $rows): array
+    private function normalizeProjects(Collection $rows): array
     {
         $normalized = [];
         foreach ($rows as $row) {
-            $title = $row->title ?? $row->name ?? null;
+            $title = $row->title ?? null;
             $normalized[] = [
-                'id' => $row->id ?? null,
-                'code' => $row->code ?? null,
+                'id' => $row->id,
+                'code' => $row->code,
                 'title' => $title ?: 'Proiect',
-                'domain' => $row->domain ?? null,
+                'domain' => $row->domain,
+                'classroom' => $row->classroom?->name,
+                'classroom_code' => $row->classroom?->code,
                 'status' => $row->status ?? 'n/a',
-                'start_date' => $this->formatDate($row->start_date ?? null),
-                'end_date' => $this->formatDate($row->end_date ?? null),
-                'deadline_at' => $this->formatDateTime($row->deadline_at ?? null),
-                'created_at' => $this->formatDateTime($row->created_at ?? null),
+                'start_date' => $this->formatDate($row->start_date?->format('Y-m-d')),
+                'end_date' => $this->formatDate($row->end_date?->format('Y-m-d')),
+                'deadline_at' => $this->formatDateTime($row->deadline_at?->format('Y-m-d H:i:s')),
+                'created_at' => $this->formatDateTime($row->created_at?->format('Y-m-d H:i:s')),
             ];
         }
         return $normalized;
+    }
+
+    private function splitProjectsByState(array $projects): array
+    {
+        $active = [];
+        $archived = [];
+
+        foreach ($projects as $project) {
+            $status = strtolower((string) ($project['status'] ?? ''));
+
+            if (in_array($status, ['closed', 'archived'], true)) {
+                $archived[] = $project;
+                continue;
+            }
+
+            $active[] = $project;
+        }
+
+        return [$active, $archived];
     }
 
     private function formatDate(?string $value): ?string

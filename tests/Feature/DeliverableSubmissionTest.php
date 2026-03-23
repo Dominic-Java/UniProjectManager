@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\Classroom;
 use App\Models\Deliverable;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -21,11 +23,13 @@ class DeliverableSubmissionTest extends TestCase
 
         $professor = User::factory()->create(['role' => 'profesor']);
         $student = User::factory()->create(['role' => 'student']);
+        $classroom = $this->createClassroomWithMembers($professor, $student, 'Baze de date');
 
         $project = Project::create([
             'title' => 'Proiect Fisiere',
             'description' => 'Descriere',
             'domain' => 'Baze de date',
+            'classroom_id' => $classroom->id,
             'status' => 'open',
             'visibility' => 'public',
             'min_team_size' => 1,
@@ -69,11 +73,13 @@ class DeliverableSubmissionTest extends TestCase
 
         $professor = User::factory()->create(['role' => 'profesor']);
         $student = User::factory()->create(['role' => 'student']);
+        $classroom = $this->createClassroomWithMembers($professor, $student, 'IA');
 
         $project = Project::create([
             'title' => 'Proiect Inchis',
             'description' => 'Descriere',
             'domain' => 'IA',
+            'classroom_id' => $classroom->id,
             'status' => 'open',
             'visibility' => 'public',
             'min_team_size' => 1,
@@ -110,11 +116,13 @@ class DeliverableSubmissionTest extends TestCase
 
         $professor = User::factory()->create(['role' => 'profesor']);
         $student = User::factory()->create(['role' => 'student']);
+        $classroom = $this->createClassroomWithMembers($professor, $student, 'PAOO');
 
         $project = Project::create([
             'title' => 'Proiect Reupload',
             'description' => 'Descriere',
             'domain' => 'PAOO',
+            'classroom_id' => $classroom->id,
             'status' => 'open',
             'visibility' => 'public',
             'min_team_size' => 1,
@@ -157,5 +165,37 @@ class DeliverableSubmissionTest extends TestCase
         ]);
 
         $this->assertDatabaseCount('deliverable_submissions', 1);
+    }
+
+    private function createClassroomWithMembers(User $professor, User $student, string $subject): Classroom
+    {
+        $classroom = Classroom::create([
+            'code' => Classroom::generateCode(),
+            'name' => 'Clasa ' . $subject,
+            'subject' => $subject,
+            'created_by' => $professor->id,
+            'is_active' => true,
+        ]);
+
+        DB::table('classroom_members')->insert([
+            [
+                'classroom_id' => $classroom->id,
+                'user_id' => $professor->id,
+                'role' => 'teacher',
+                'joined_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'classroom_id' => $classroom->id,
+                'user_id' => $student->id,
+                'role' => 'student',
+                'joined_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        return $classroom;
     }
 }

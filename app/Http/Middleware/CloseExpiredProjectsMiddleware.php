@@ -21,6 +21,14 @@ class CloseExpiredProjectsMiddleware
                     'status' => 'closed',
                     'updated_at' => now(),
                 ]);
+
+            $retentionHours = max(0, (int) config('uniprojectmanager.expired_project_retention_hours', 24));
+            $pruneBefore = $retentionHours > 0 ? now()->subHours($retentionHours) : now();
+
+            Project::query()
+                ->whereNotNull('deadline_at')
+                ->where('deadline_at', '<=', $pruneBefore)
+                ->delete();
         }
 
         return $next($request);

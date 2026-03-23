@@ -18,13 +18,14 @@ class HomeService
         $displayName = $user?->first_name ?: $user?->name ?: 'utilizator';
 
         $quickActions = [
+            ['label' => 'Classroom-uri', 'href' => '/classrooms'],
             ['label' => 'Vezi proiecte', 'href' => '/projects'],
             ['label' => 'Echipe', 'href' => '/teams'],
             ['label' => 'Livrabile', 'href' => '/deliverables'],
         ];
 
         if ($user && $user->hasRole('profesor')) {
-            array_unshift($quickActions, ['label' => 'Creeaza proiect', 'href' => '/projects/create']);
+            array_unshift($quickActions, ['label' => 'Creeaza classroom', 'href' => '/classrooms/create']);
         }
 
         return [
@@ -57,6 +58,7 @@ class HomeService
             ],
             'recent_projects' => $this->normalizeProjects($recentProjects),
             'actions' => [
+                ['label' => 'Classroom-urile mele', 'href' => '/classrooms'],
                 ['label' => 'Vezi proiecte', 'href' => '/projects'],
                 ['label' => 'Echipele mele', 'href' => '/teams'],
                 ['label' => 'Livrabile', 'href' => '/deliverables'],

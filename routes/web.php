@@ -10,6 +10,7 @@ use App\Http\Controllers\Web\SettingsController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\ProjectMaterialsController;
+use App\Http\Controllers\Web\ClassroomsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -39,6 +40,28 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::post('/profile/password-reset-link', [ProfileController::class, 'sendPasswordResetLink'])->name('profile.password-reset-link');
+    Route::post('/profile/theme-toggle', [ProfileController::class, 'toggleTheme'])->name('profile.theme.toggle');
+
+    Route::get('/classrooms', [ClassroomsController::class, 'index'])->name('classrooms.index');
+    Route::get('/classrooms/create', [ClassroomsController::class, 'create'])
+        ->middleware('role:profesor')
+        ->name('classrooms.create');
+    Route::post('/classrooms', [ClassroomsController::class, 'store'])
+        ->middleware('role:profesor')
+        ->name('classrooms.store');
+    Route::post('/classrooms/join', [ClassroomsController::class, 'joinByCode'])
+        ->middleware('role:student')
+        ->name('classrooms.join');
+    Route::get('/classrooms/{classroom}', [ClassroomsController::class, 'show'])->name('classrooms.show');
+    Route::post('/classrooms/{classroom}/invitations', [ClassroomsController::class, 'sendInvitation'])
+        ->middleware('role:profesor')
+        ->name('classrooms.invitations.send');
+    Route::post('/classroom-invitations/{invitation}/respond', [ClassroomsController::class, 'respondInvitation'])
+        ->middleware('role:student')
+        ->name('classrooms.invitations.respond');
+    Route::delete('/classroom-invitations/{invitation}', [ClassroomsController::class, 'cancelInvitation'])
+        ->middleware('role:profesor')
+        ->name('classrooms.invitations.cancel');
 
     Route::get('/projects', [ProjectsController::class, 'index'])->name('projects.index');
     Route::get('/projects/create', [ProjectsController::class, 'create'])

@@ -15,6 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->encryptCookies(['upm_theme']);
+
         $middleware->alias([
             'role' => RoleMiddleware::class,
         ]);

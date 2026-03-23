@@ -29,23 +29,79 @@ final class HomeRepository
         }
 
         if ($role === 'profesor') {
+            if (!Schema::hasTable('classrooms')) {
+                return DB::table('projects')
+                    ->select(['id', 'title', 'domain', 'status', 'deadline_at', 'created_at'])
+                    ->where('created_by', $userId)
+                    ->orderByDesc('created_at')
+                    ->limit($limit)
+                    ->get()
+                    ->toArray();
+            }
+
             return DB::table('projects')
-                ->select(['id', 'title', 'domain', 'status', 'deadline_at', 'created_at'])
-                ->where('created_by', $userId)
+                ->leftJoin('classrooms', 'classrooms.id', '=', 'projects.classroom_id')
+                ->leftJoin('classroom_members', function ($join) use ($userId): void {
+                    $join->on('classroom_members.classroom_id', '=', 'projects.classroom_id')
+                        ->where('classroom_members.user_id', '=', $userId)
+                        ->where('classroom_members.role', '=', 'teacher');
+                })
+                ->leftJoin('project_staff', function ($join) use ($userId): void {
+                    $join->on('project_staff.project_id', '=', 'projects.id')
+                        ->where('project_staff.professor_user_id', '=', $userId);
+                })
+                ->select([
+                    'projects.id',
+                    'projects.title',
+                    'projects.domain',
+                    'projects.status',
+                    'projects.deadline_at',
+                    'projects.created_at',
+                ])
+                ->where(function ($query) use ($userId): void {
+                    $query->where('classrooms.created_by', $userId)
+                        ->orWhereNotNull('classroom_members.user_id')
+                        ->orWhereNotNull('project_staff.professor_user_id')
+                        ->orWhere(function ($legacyQuery) use ($userId): void {
+                            $legacyQuery
+                                ->whereNull('projects.classroom_id')
+                                ->where('projects.created_by', $userId);
+                        });
+                })
+                ->distinct()
                 ->orderByDesc('created_at')
                 ->limit($limit)
                 ->get()
                 ->toArray();
         }
 
-        if (!Schema::hasTable('teams') || !Schema::hasTable('team_members')) {
-            return [];
+        if (!Schema::hasTable('classroom_members')) {
+            if (!Schema::hasTable('teams') || !Schema::hasTable('team_members')) {
+                return [];
+            }
+
+            return DB::table('projects')
+                ->join('teams', 'teams.project_id', '=', 'projects.id')
+                ->join('team_members', 'team_members.team_id', '=', 'teams.id')
+                ->where('team_members.user_id', $userId)
+                ->select([
+                    'projects.id',
+                    'projects.title',
+                    'projects.domain',
+                    'projects.status',
+                    'projects.deadline_at',
+                    'projects.created_at',
+                ])
+                ->distinct()
+                ->orderByDesc('projects.created_at')
+                ->limit($limit)
+                ->get()
+                ->toArray();
         }
 
         return DB::table('projects')
-            ->join('teams', 'teams.project_id', '=', 'projects.id')
-            ->join('team_members', 'team_members.team_id', '=', 'teams.id')
-            ->where('team_members.user_id', $userId)
+            ->join('classroom_members', 'classroom_members.classroom_id', '=', 'projects.classroom_id')
+            ->where('classroom_members.user_id', $userId)
             ->select([
                 'projects.id',
                 'projects.title',

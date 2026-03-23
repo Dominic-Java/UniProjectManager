@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\ProjectMaterial;
 use App\Services\Security\AuditLogger;
+use App\Support\ClassroomAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -17,6 +18,7 @@ class ProjectMaterialsController extends Controller
     public function store(Request $request, Project $project): RedirectResponse
     {
         abort_unless($request->user()?->hasRole('profesor'), 403);
+        abort_unless(ClassroomAccess::canUploadClasswork($request->user(), $project), 403);
 
         if ($project->isLocked()) {
             return back()->with('error', 'Proiectul este inchis dupa deadline. Nu mai poti adauga materiale.');
@@ -60,6 +62,8 @@ class ProjectMaterialsController extends Controller
     public function download(Request $request, ProjectMaterial $material): StreamedResponse|RedirectResponse
     {
         abort_unless($request->user(), 403);
+        $material->loadMissing('project');
+        abort_unless($material->project && ClassroomAccess::canAccessProject($request->user(), $material->project), 403);
 
         if (!Storage::disk('local')->exists($material->file_path)) {
             return back()->with('error', 'Materialul nu mai exista in storage.');
@@ -77,6 +81,7 @@ class ProjectMaterialsController extends Controller
         abort_unless($request->user()?->hasRole('profesor'), 403);
 
         $material->loadMissing('project');
+        abort_unless($material->project && ClassroomAccess::canUploadClasswork($request->user(), $material->project), 403);
         if ($material->project?->isLocked()) {
             return back()->with('error', 'Proiectul este inchis dupa deadline. Nu mai poti sterge materiale.');
         }

@@ -20,6 +20,18 @@
                 @method('PUT')
 
                 <div style="margin-bottom:12px;">
+                    <label class="muted">Classroom</label>
+                    <select name="classroom_id" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
+                        <option value="">-- fara classroom (legacy) --</option>
+                        @foreach($classrooms as $classroom)
+                            <option value="{{ $classroom->id }}" @selected((string) old('classroom_id', $project->classroom_id) === (string) $classroom->id)>
+                                {{ $classroom->name }} - {{ $classroom->subject }} ({{ $classroom->code }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div style="margin-bottom:12px;">
                     <label class="muted">Titlu proiect</label>
                     <input type="text" name="title" value="{{ old('title', $project->title) }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);" required>
                 </div>
@@ -34,10 +46,16 @@
                     <textarea name="description" rows="4" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);" required>{{ old('description', $project->description) }}</textarea>
                 </div>
 
-                <div style="margin-bottom:12px;">
-                    <label class="muted">Materie / disciplina</label>
-                    <input type="text" name="domain" value="{{ old('domain', $project->domain) }}" placeholder="Ex: Ingineria Programarii" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);" required>
-                </div>
+                @if($project->classroom_id)
+                    <div class="notice" style="margin-bottom:12px;">
+                        Materia este preluata automat din classroom: <strong>{{ $project->domain ?: '-' }}</strong>
+                    </div>
+                @else
+                    <div style="margin-bottom:12px;">
+                        <label class="muted">Materie / disciplina</label>
+                        <input type="text" name="domain" value="{{ old('domain', $project->domain) }}" placeholder="Ex: Ingineria Programarii" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);" required>
+                    </div>
+                @endif
 
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;">
                     <div>

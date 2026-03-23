@@ -27,6 +27,7 @@ class ProfileController extends Controller
         $validator = Validator::make($request->all(), [
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
+            'theme_preference' => ['nullable', 'in:light,dark'],
             'birth_day' => ['nullable', 'integer', 'min:1', 'max:31'],
             'birth_month' => ['nullable', 'integer', 'min:1', 'max:12'],
             'birth_year' => ['nullable', 'integer', 'min:1900', 'max:' . date('Y')],
@@ -61,7 +62,31 @@ class ProfileController extends Controller
         $user->update($validated);
         AuditLogger::log('profile.update', $user, 'user', $user->id);
 
-        return back()->with('success', 'Profilul a fost actualizat.');
+        $theme = in_array(($validated['theme_preference'] ?? ''), ['light', 'dark'], true)
+            ? $validated['theme_preference']
+            : ($user->theme_preference ?? 'light');
+
+        return back()
+            ->withCookie(cookie('upm_theme', $theme, 60 * 24 * 365, '/', null, false, false, false, 'Lax'))
+            ->with('success', 'Profilul a fost actualizat.');
+    }
+
+    public function toggleTheme(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $nextTheme = ($user->theme_preference ?? 'light') === 'dark' ? 'light' : 'dark';
+
+        $user->update([
+            'theme_preference' => $nextTheme,
+        ]);
+
+        AuditLogger::log('profile.theme.toggle', $user, 'user', $user->id, [
+            'theme' => $nextTheme,
+        ]);
+
+        return back()
+            ->withCookie(cookie('upm_theme', $nextTheme, 60 * 24 * 365, '/', null, false, false, false, 'Lax'))
+            ->with('success', 'Tema a fost actualizata.');
     }
 
     public function sendPasswordResetLink(Request $request, PasswordResetService $passwordResetService): RedirectResponse
