@@ -3,8 +3,8 @@
 @section('content')
     <section class="hero">
         <div class="pill">Classroom nou</div>
-        <h1>Creeaza clasa pe materie</h1>
-        <p>Dupa ce salvezi clasa, codul este generat automat si poti invita studenti.</p>
+        <h1>Configureaza un classroom</h1>
+        <p>Dupa salvare, codul clasei se genereaza automat si poate fi trimis studentilor.</p>
     </section>
 
     <section class="grid">
@@ -39,11 +39,11 @@
         </div>
 
         <div class="card span-4">
-            <h3>Flux recomandat</h3>
+            <h3>Recomandare de lucru</h3>
             <ul>
-                <li>Creezi classroom-ul pe materia predata.</li>
-                <li>Trimiti invitatii studentilor sau le comunici codul clasei.</li>
-                <li>Creezi proiectele direct in classroom-ul respectiv.</li>
+                <li>Creeaza classroom-ul pentru disciplina predata.</li>
+                <li>Invita studentii prin email sau prin codul clasei.</li>
+                <li>Adauga proiectele direct in classroom-ul creat.</li>
             </ul>
         </div>
     </section>

@@ -43,8 +43,24 @@
         border-color: #475569;
         background: rgba(15, 23, 42, 0.55);
     }
+    .student-kpis {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+    }
+    .student-kpi {
+        border-radius: 14px;
+        border: 1px solid rgba(249, 115, 22, 0.26);
+        background: rgba(255, 250, 242, 0.55);
+        padding: 14px;
+    }
+    body[data-theme="dark"] .student-kpi {
+        border-color: #475569;
+        background: rgba(15, 23, 42, 0.55);
+    }
     @media (max-width: 900px) {
-        .student-actions { grid-template-columns: 1fr; }
+        .student-actions,
+        .student-kpis { grid-template-columns: 1fr; }
     }
 </style>
 @endpush
@@ -53,35 +69,57 @@
     <section class="hero">
         <div class="pill">Student</div>
         <h1>{{ $subtitle }}</h1>
-        <p>Bine ai revenit! Aici vezi clar ce ai de facut si ce urmeaza.</p>
+        <p>Aici gasesti activitatea ta curenta: proiecte, echipa si livrabilele care urmeaza.</p>
     </section>
 
     <section class="grid home-grid">
-        <div class="card span-8 student-highlight">
+        <div class="card span-12 student-highlight">
+            <h3>Actiuni rapide</h3>
+            <p class="muted">Acceseaza direct sectiunile folosite cel mai des.</p>
+            <div class="student-actions">
+                @foreach($actions as $a)
+                    <div class="student-action">
+                        <strong>{{ $a['label'] }}</strong>
+                        <div style="margin-top:10px;">
+                            <a class="btn btn-primary" href="{{ $a['href'] }}">Acceseaza</a>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        <div class="card span-12">
             <h3>Planul tau de lucru</h3>
             <ul>
                 @foreach($highlights as $item)
                     <li>{{ $item }}</li>
                 @endforeach
             </ul>
-            <p class="muted">Ramai aproape de echipa si urmareste termenele din proiect.</p>
+            <p class="muted">Pastreaza ritmul echipei si verifica termenele importante in fiecare sesiune.</p>
         </div>
 
-        <div class="card span-4">
-            <h3>Contul tau</h3>
-            <p class="muted">Rolul tau este <strong>Student</strong>.</p>
-            <div class="notice" style="margin-top:10px;">
-                Conturile sunt create de administrator, nu prin inregistrare publica.
+        <div class="card span-12">
+            <h3>Rezumat rapid</h3>
+            <div class="student-kpis">
+                <div class="student-kpi">
+                    <div class="muted">Proiecte vizibile</div>
+                    <div style="font-size:28px;font-weight:800;margin-top:4px;">{{ count($recent_projects) }}</div>
+                </div>
+                <div class="student-kpi">
+                    <div class="muted">Urmatorul pas</div>
+                    <div style="margin-top:4px;font-weight:700;">Verifica deadline-urile apropiate</div>
+                </div>
+                <div class="student-kpi">
+                    <div class="muted">Recomandare</div>
+                    <div style="margin-top:4px;font-weight:700;">Pastreaza sincronizarea cu echipa ta</div>
+                </div>
             </div>
-            <p class="muted" style="margin-top:8px;">
-                Pentru acces nou sau schimbari de rol, contacteaza profesorul/adminul responsabil.
-            </p>
         </div>
 
         <div class="card span-12">
             <h3>Proiectele tale</h3>
             @if(empty($recent_projects))
-                <div class="notice">Nu esti inca intr-un proiect activ. Verifica invitatiile de echipa.</div>
+                <div class="notice">Nu ai proiecte active momentan. Verifica invitatiile primite in Classroom si Echipe.</div>
             @else
                 <table class="table">
                     <thead>
@@ -106,24 +144,10 @@
             @endif
         </div>
 
-        <div class="card span-12">
-            <h3>Intra rapid unde ai nevoie</h3>
-            <div class="student-actions">
-                @foreach($actions as $a)
-                    <div class="student-action">
-                        <strong>{{ $a['label'] }}</strong>
-                        <div style="margin-top:10px;">
-                            <a class="btn btn-primary" href="{{ $a['href'] }}">Deschide</a>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-
         <div class="card span-12 student-flow">
-            <strong>Flux student simplu:</strong>
+            <strong>Flux recomandat pentru studenti:</strong>
             <div style="margin-top:8px;">
-                Alatura-te unei echipe -> urmareste milestones -> trimite livrabile -> primeste feedback.
+                Intra in classroom -> colaboreaza cu echipa -> preda la timp -> urmareste feedback-ul.
             </div>
         </div>
     </section>

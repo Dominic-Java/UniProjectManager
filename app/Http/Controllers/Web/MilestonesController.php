@@ -72,7 +72,7 @@ class MilestonesController extends Controller
 
         AuditLogger::log('milestones.create', $request->user(), 'milestone', $milestone->id);
 
-        return redirect()->route('milestones.show', $milestone)->with('success', 'Milestone-ul a fost creat.');
+        return redirect()->route('milestones.show', $milestone)->with('success', 'Etapa a fost creata cu succes.');
     }
 
     public function show(Milestone $milestone): View
@@ -137,7 +137,7 @@ class MilestonesController extends Controller
         $milestone->update($validated);
         AuditLogger::log('milestones.update', $request->user(), 'milestone', $milestone->id);
 
-        return redirect()->route('milestones.show', $milestone)->with('success', 'Milestone-ul a fost actualizat.');
+        return redirect()->route('milestones.show', $milestone)->with('success', 'Modificarile etapei au fost salvate.');
     }
 
     public function destroy(Milestone $milestone): RedirectResponse
@@ -154,11 +154,11 @@ class MilestonesController extends Controller
         $milestone->delete();
         AuditLogger::log('milestones.delete', request()->user(), 'milestone', $milestoneId);
 
-        return redirect()->route('milestones.index')->with('success', 'Milestone-ul a fost sters.');
+        return redirect()->route('milestones.index')->with('success', 'Etapa a fost eliminata.');
     }
 
     private function projectLockedMessage(): string
     {
-        return 'Proiectul este inchis dupa deadline. Milestone-urile nu mai pot fi modificate.';
+        return 'Proiectul este inchis dupa termen. Etapele nu mai pot fi modificate.';
     }
 }

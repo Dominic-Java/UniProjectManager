@@ -85,8 +85,8 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 18px 0;
-            gap: 26px;
+            padding: 14px 0;
+            gap: 18px;
         }
         .nav-shell {
             padding-inline: clamp(28px, 6vw, 128px);
@@ -96,15 +96,43 @@
             letter-spacing: 0.2px;
             font-size: 18px;
         }
-        .menu { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
-        .menu a {
+        .menu { display: flex; flex: 1; align-items: center; min-width: 0; }
+        .menu-auth { gap: 14px; }
+        .menu-auth .menu-links { flex: 1; justify-content: center; padding-inline: 20px; }
+        .menu-auth .menu-actions { margin-left: auto; }
+        .menu-guest { justify-content: flex-end; }
+        .menu-links {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .menu-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        .menu-links a {
             color: var(--muted);
             font-weight: 600;
-            padding: 6px 10px;
-            border-radius: 10px;
+            padding: 8px 12px;
+            border-radius: 12px;
             transition: all 0.2s ease;
+            border: 1px solid rgba(249, 115, 22, 0.15);
+            background: rgba(255, 255, 255, 0.4);
         }
-        .menu a:hover { color: var(--ink); background: rgba(249, 115, 22, 0.14); }
+        .menu-links a:hover { color: var(--ink); background: rgba(249, 115, 22, 0.16); }
+        body[data-theme="dark"] .menu-links a {
+            background: rgba(15, 23, 42, 0.55);
+            border-color: #334155;
+            color: #cbd5e1;
+        }
+        body[data-theme="dark"] .menu-links a:hover {
+            background: rgba(51, 65, 85, 0.6);
+            color: #f8fafc;
+        }
         .menu-dropdown {
             position: relative;
         }
@@ -114,23 +142,33 @@
             gap: 6px;
             color: var(--muted);
             font-weight: 600;
-            padding: 6px 10px;
-            border-radius: 10px;
+            padding: 8px 12px;
+            border-radius: 12px;
             transition: all 0.2s ease;
-            border: 0;
-            background: transparent;
+            border: 1px solid rgba(249, 115, 22, 0.15);
+            background: rgba(255, 255, 255, 0.4);
             cursor: pointer;
             font: inherit;
         }
         .menu-dropdown-toggle::after {
-            content: "▾";
+            content: "v";
             font-size: 11px;
             opacity: 0.85;
         }
         .menu-dropdown:hover .menu-dropdown-toggle,
         .menu-dropdown:focus-within .menu-dropdown-toggle {
             color: var(--ink);
-            background: rgba(249, 115, 22, 0.14);
+            background: rgba(249, 115, 22, 0.16);
+        }
+        body[data-theme="dark"] .menu-dropdown-toggle {
+            background: rgba(15, 23, 42, 0.55);
+            border-color: #334155;
+            color: #cbd5e1;
+        }
+        body[data-theme="dark"] .menu-dropdown:hover .menu-dropdown-toggle,
+        body[data-theme="dark"] .menu-dropdown:focus-within .menu-dropdown-toggle {
+            background: rgba(51, 65, 85, 0.6);
+            color: #f8fafc;
         }
         .menu-dropdown-panel {
             position: absolute;
@@ -273,7 +311,15 @@
         }
         @media (max-width: 900px) {
             .span-4, .span-5, .span-6, .span-7, .span-8 { grid-column: span 12; }
-            .menu { gap: 10px; }
+            .menu { width: 100%; }
+            .menu-auth { flex-direction: column; align-items: stretch; gap: 10px; }
+            .menu-auth .menu-links,
+            .menu-auth .menu-actions {
+                justify-content: flex-start;
+                margin-left: 0;
+            }
+            .menu-auth .menu-links { padding-inline: 0; }
+            .menu-guest { justify-content: flex-end; }
             .table { min-width: 0; }
             [style*="grid-template-columns:repeat(2,1fr)"],
             [style*="grid-template-columns:repeat(3,1fr)"],
@@ -304,7 +350,8 @@
             .menu-dropdown:focus-within .menu-dropdown-panel {
                 display: grid;
             }
-            .btn { width: 100%; }
+            .menu-actions .btn,
+            .nav-cta .btn { width: auto; }
             .hero { padding-top: 20px; }
             .table { display: block; overflow-x: auto; white-space: nowrap; }
         }
@@ -315,46 +362,50 @@
 <header>
     <div class="wrap nav nav-shell">
         <a class="brand" href="{{ route('landing') }}">UniProjectManager</a>
-        <nav class="menu">
+        <nav class="menu {{ auth()->check() ? 'menu-auth' : 'menu-guest' }}">
             @auth
-                <a href="{{ route('dashboard') }}">Home</a>
-                <div class="menu-dropdown">
-                    <button type="button" class="menu-dropdown-toggle" aria-haspopup="menu" aria-expanded="false">
-                        Classroom
-                    </button>
-                    <div class="menu-dropdown-panel" role="menu" aria-label="Classroom">
-                        <a role="menuitem" href="{{ route('classrooms.index') }}">Classroom-uri</a>
-                        @if(auth()->user()?->hasRole('profesor'))
-                            <a role="menuitem" href="{{ route('classrooms.create') }}">Creeaza classroom</a>
-                        @endif
+                <div class="menu-links">
+                    <a href="{{ route('dashboard') }}">Dashboard</a>
+                    <div class="menu-dropdown">
+                        <button type="button" class="menu-dropdown-toggle" aria-haspopup="menu" aria-expanded="false">
+                            Classroom
+                        </button>
+                        <div class="menu-dropdown-panel" role="menu" aria-label="Classroom">
+                            <a role="menuitem" href="{{ route('classrooms.index') }}">Classroom-uri</a>
+                            @if(auth()->user()?->hasRole('profesor'))
+                                <a role="menuitem" href="{{ route('classrooms.create') }}">Classroom nou</a>
+                            @endif
+                        </div>
                     </div>
+                    <a href="{{ route('projects.index') }}">Proiecte</a>
+                    <a href="{{ route('teams.index') }}">Echipe</a>
+                    <a href="{{ route('deliverables.index') }}">Livrabile</a>
+                    <a href="{{ route('milestones.index') }}">Etape</a>
+                    <a href="{{ route('profile.edit') }}">Profil</a>
+                    @if(auth()->user()?->isAdmin())
+                        <a href="{{ route('settings.index') }}">Administrare</a>
+                    @endif
                 </div>
-                <a href="{{ route('projects.index') }}">Proiecte</a>
-                <a href="{{ route('teams.index') }}">Echipe</a>
-                <a href="{{ route('deliverables.index') }}">Livrabile</a>
-                <a href="{{ route('milestones.index') }}">Milestones</a>
-                <a href="{{ route('profile.edit') }}">Profil</a>
-                @if(auth()->user()?->isAdmin())
-                    <a href="{{ route('settings.index') }}">Setari</a>
-                @endif
-                <span class="pill">{{ auth()->user()->name }} ({{ auth()->user()->role }})</span>
-                <form method="POST" action="{{ route('profile.theme.toggle') }}">
-                    @csrf
-                    <button type="submit" class="btn btn-outline btn-sm">
-                        {{ (auth()->user()->theme_preference ?? 'light') === 'dark' ? 'Light mode' : 'Dark mode' }}
-                    </button>
-                </form>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="btn btn-danger">Logout</button>
-                </form>
+                <div class="menu-actions">
+                    <span class="pill">{{ auth()->user()->name }} ({{ ucfirst(auth()->user()->role) }})</span>
+                    <form method="POST" action="{{ route('profile.theme.toggle') }}">
+                        @csrf
+                        <button type="submit" class="btn btn-outline btn-sm">
+                            {{ (auth()->user()->theme_preference ?? 'light') === 'dark' ? 'Mod luminos' : 'Mod intunecat' }}
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="btn btn-danger btn-sm">Deconectare</button>
+                    </form>
+                </div>
             @endauth
             @guest
                 <div class="nav-cta">
                     <button type="button" class="btn btn-secondary btn-sm" id="guest-theme-toggle">
-                        {{ $initialTheme === 'dark' ? 'Light mode' : 'Dark mode' }}
+                        {{ $initialTheme === 'dark' ? 'Mod luminos' : 'Mod intunecat' }}
                     </button>
-                    <a class="btn btn-outline btn-sm" href="{{ route('login') }}">Login</a>
+                    <a class="btn btn-outline btn-sm" href="{{ route('login') }}">Autentificare</a>
                 </div>
             @endguest
         </nav>
@@ -367,7 +418,7 @@
 
 <footer class="footer">
     <div class="wrap muted" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;">
-        <span>UniProjectManager · Platforma pentru proiecte studentesti</span>
+        <span>UniProjectManager - Platforma pentru proiecte studentesti</span>
         <span>Support: uniprojectmanager.noreply@gmail.com</span>
     </div>
 </footer>
@@ -390,7 +441,8 @@
 
         function applyTheme(theme) {
             body.setAttribute('data-theme', theme);
-            document.cookie = 'upm_theme=' + theme + '; path=/; max-age=31536000; SameSite=Lax';
+            var secureSuffix = window.location.protocol === 'https:' ? '; Secure' : '';
+            document.cookie = 'upm_theme=' + theme + '; path=/; max-age=31536000; SameSite=Lax' + secureSuffix;
         }
 
         var currentTheme = body.getAttribute('data-theme') || 'light';
@@ -400,7 +452,7 @@
         if (!guestToggle) return;
 
         function syncGuestLabel(theme) {
-            guestToggle.textContent = theme === 'dark' ? 'Light mode' : 'Dark mode';
+            guestToggle.textContent = theme === 'dark' ? 'Mod luminos' : 'Mod intunecat';
         }
 
         syncGuestLabel(currentTheme);

@@ -4,10 +4,13 @@
 <style>
     .landing-wrap {
         display: grid;
-        gap: 24px;
+        gap: 20px;
         padding: 36px 0 28px;
     }
     .landing-hero {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 18px;
         border-radius: 24px;
         border: 1px solid rgba(251, 146, 60, 0.2);
         background: linear-gradient(145deg, #fffefb 0%, #fff7ed 60%, #ffeedc 100%);
@@ -34,6 +37,33 @@
         display: flex;
         gap: 12px;
         flex-wrap: wrap;
+    }
+    .hero-panel {
+        border-radius: 16px;
+        border: 1px solid rgba(251, 146, 60, 0.2);
+        background: rgba(255, 255, 255, 0.65);
+        padding: 16px;
+        align-self: stretch;
+    }
+    body[data-theme="dark"] .hero-panel {
+        border-color: #475569;
+        background: rgba(15, 23, 42, 0.55);
+    }
+    .hero-panel-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .hero-panel-item {
+        border-radius: 12px;
+        border: 1px solid rgba(249, 115, 22, 0.22);
+        background: rgba(255, 250, 242, 0.55);
+        padding: 10px 12px;
+    }
+    body[data-theme="dark"] .hero-panel-item {
+        border-color: #475569;
+        background: rgba(15, 23, 42, 0.55);
     }
     .benefits-grid {
         display: grid;
@@ -108,7 +138,13 @@
         border: 1px solid #475569;
     }
     @media (max-width: 960px) {
+        .landing-hero {
+            grid-template-columns: 1fr;
+        }
         .benefits-grid {
+            grid-template-columns: 1fr;
+        }
+        .hero-panel-grid {
             grid-template-columns: 1fr;
         }
         .final-cta {
@@ -122,42 +158,68 @@
 @section('content')
     <section class="landing-wrap">
         <div class="landing-hero">
-            <div class="pill">Bun venit in UniProjectManager</div>
-            <h1>Proiectele tale, fără bătăi de cap.</h1>
-            <p>UniProjectManager te ajută să ții totul organizat – task-uri, echipe și deadline-uri, într-un singur loc.</p>
-            <div class="hero-actions">
-                <a class="btn btn-primary" href="{{ route('login') }}">Intră în cont</a>
+            <div>
+                <div class="pill">Bine ai venit in UniProjectManager</div>
+                <h1>Coordoneaza proiectele universitare intr-un cadru organizat!</h1>
+                <p>
+                    Cu UniProjectManager gestionezi intr-un singur loc clasele, proiectele, echipele si predarile.
+                    Platforma te ajuta sa lucrezi organizat, cu termene vizibile si colaborare eficienta.
+                </p>
+                <div class="hero-actions">
+                    <a class="btn btn-primary" href="{{ route('login') }}">Autentificare</a>
+                </div>
+            </div>
+            <div class="hero-panel">
+                <strong>Ce obtii din prima zi</strong>
+                <div class="hero-panel-grid">
+                    <div class="hero-panel-item">
+                        <strong>Classroom-uri clare</strong>
+                        <p class="muted" style="margin:6px 0 0;">Fiecare grupa are spatiul ei de lucru.</p>
+                    </div>
+                    <div class="hero-panel-item">
+                        <strong>Termene vizibile</strong>
+                        <p class="muted" style="margin:6px 0 0;">Deadline-urile raman centralizate.</p>
+                    </div>
+                    <div class="hero-panel-item">
+                        <strong>Echipe organizate</strong>
+                        <p class="muted" style="margin:6px 0 0;">Invitatii si roluri intr-un flux simplu.</p>
+                    </div>
+                    <div class="hero-panel-item">
+                        <strong>Predari urmaribile</strong>
+                        <p class="muted" style="margin:6px 0 0;">Livrabilele sunt usor de monitorizat.</p>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="benefits-grid">
             <div class="benefit-card">
-                <h3>Știi mereu ce ai de făcut</h3>
-                <p>Task-urile sunt clare și ușor de urmărit.</p>
+                <h3>Structura clara</h3>
+                <p>Fiecare proiect este organizat pe etape, cu responsabilitati usor de urmarit.</p>
             </div>
             <div class="benefit-card">
-                <h3>Lucrezi mai ușor în echipă</h3>
-                <p>Toată lumea e pe aceeași pagină.</p>
+                <h3>Colaborare eficienta</h3>
+                <p>Studentii si profesorii lucreaza in acelasi flux, fara informatie dispersata.</p>
             </div>
             <div class="benefit-card">
-                <h3>Fără stres inutil</h3>
-                <p>Gata cu mesajele pierdute și confuzia.</p>
+                <h3>Termene controlate</h3>
+                <p>Deadline-urile sunt vizibile si usor de gestionat pentru intreaga echipa.</p>
             </div>
         </div>
 
         <div class="steps-card">
-            <h2>Cum începi</h2>
+            <h2>Cum incepi</h2>
             <ol class="steps-list">
-                <li>Profesorul creează proiectul</li>
-                <li>Intri în echipă</li>
-                <li>Lucrezi și încarci livrabilele</li>
-                <li>Vezi progresul în timp real</li>
+                <li>Profesorul configureaza classroom-ul si proiectul.</li>
+                <li>Studentii se alatura clasei si echipelor.</li>
+                <li>Etapele si livrabilele sunt urmarite pana la final.</li>
+                <li>Feedback-ul ramane centralizat pentru fiecare predare.</li>
             </ol>
         </div>
 
         <div class="final-cta">
-            <p>Încearcă și vezi cât de simplu poate fi.</p>
-            <a class="btn btn-secondary" href="{{ route('login') }}">Intră acum</a>
+            <p>Solicita acces si incepe activitatea in UniProjectManager.</p>
+            <a class="btn btn-secondary" href="{{ route('login') }}">Intra in platforma</a>
         </div>
     </section>
 @endsection

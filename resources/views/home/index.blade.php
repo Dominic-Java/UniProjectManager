@@ -78,27 +78,27 @@
     <section class="hero">
         <div class="pill">Profesor</div>
         <h1>{{ $subtitle }}</h1>
-        <p>Ai intr-un singur loc classroom-urile pe materii, echipele si livrabilele.</p>
+        <p>Acesta este centrul tau de lucru: clase, proiecte, echipe si livrabile, intr-un singur loc.</p>
     </section>
 
     <section class="grid home-grid">
         <div class="card span-12 home-highlight">
-            <h3>Pornire rapida</h3>
-            <p class="muted">Deschide direct ce ai nevoie, fara pasi inutili.</p>
+            <h3>Actiuni rapide</h3>
+            <p class="muted">Acceseaza imediat zonele in care lucrezi cel mai des.</p>
             <div class="classroom-actions">
                 @foreach($quick_actions as $a)
                     <div class="classroom-action">
                         <strong>{{ $a['label'] }}</strong>
                         <div style="margin-top:10px;">
-                            <a class="btn btn-primary" href="{{ $a['href'] }}">Deschide</a>
+                            <a class="btn btn-primary" href="{{ $a['href'] }}">Acceseaza</a>
                         </div>
                     </div>
                 @endforeach
                 @if(auth()->user()?->isAdmin())
                     <div class="classroom-action">
-                        <strong>Setari utilizatori</strong>
+                        <strong>Administrare utilizatori</strong>
                         <div style="margin-top:10px;">
-                            <a class="btn btn-secondary" href="{{ route('settings.index') }}">Administreaza conturi</a>
+                            <a class="btn btn-secondary" href="{{ route('settings.index') }}">Gestioneaza conturile</a>
                         </div>
                     </div>
                 @endif
@@ -106,13 +106,13 @@
         </div>
 
         <div class="card span-8">
-            <h3>Snapshot pe semestru</h3>
-            <p class="muted">O privire scurta ca sa stii imediat unde esti.</p>
+            <h3>Panou de monitorizare</h3>
+            <p class="muted">Indicatori esentiali pentru activitatea curenta.</p>
             <div class="dashboard-cards">
                 <div class="dashboard-card">
                     <div class="muted">Proiecte</div>
                     <div class="metric-value">{{ $stats['projects'] }}</div>
-                    <div class="muted">in lucru</div>
+                    <div class="muted">in derulare</div>
                 </div>
                 <div class="dashboard-card">
                     <div class="muted">Echipe</div>
@@ -131,18 +131,18 @@
             <h3>Contul tau</h3>
             <p class="muted">Rolul tau este <strong>Profesor</strong>.</p>
             <div class="notice" style="margin-top:10px;">
-                Crearea conturilor este controlata de administrator.
+                Gestionarea conturilor se face din zona de administrare.
             </div>
             <p class="muted" style="margin-top:8px;">
-                Accesul nou se acorda doar prin fluxul din Setari, pe baza conturilor administrate.
+                Conturile noi se acorda controlat, pe baza regulilor institutionale configurate.
             </p>
-            <p class="muted">Daca ai nevoie de conturi noi, contacteaza administratorul platformei.</p>
+            <p class="muted">Pentru asistenta suplimentara, contacteaza administratorul platformei.</p>
         </div>
 
         <div class="card span-7">
-            <h3>Classroom-uri pe materii</h3>
+            <h3>Proiecte recente</h3>
             @if(empty($recent_projects))
-                <div class="notice">Nu ai inca proiecte create. Incepe cu primul classroom.</div>
+                <div class="notice">Nu ai proiecte active in acest moment. Poti incepe prin crearea unui classroom nou.</div>
             @else
                 <table class="table">
                     <thead>
@@ -168,7 +168,7 @@
         </div>
 
         <div class="card span-5 home-focus">
-            <h3 style="margin-top:0;">Ce merita facut azi</h3>
+            <h3 style="margin-top:0;">Prioritati pentru azi</h3>
             <ul style="margin:8px 0 0;padding-left:18px;">
                 @foreach($announcements as $msg)
                     <li>{{ $msg }}</li>

@@ -3,8 +3,8 @@
 @section('content')
     <section class="hero">
         <div class="pill">Livrabil nou</div>
-        <h1>Creeaza livrabil</h1>
-        <p>Completeaza informatiile livrabilului.</p>
+        <h1>Adauga un livrabil</h1>
+        <p>Completeaza datele necesare pentru o cerinta de predare clara.</p>
     </section>
 
     <section class="grid">
@@ -17,7 +17,7 @@
             @endif
 
             @if ($projects->count() === 0)
-                <div class="notice">Nu exista proiecte deschise pentru care poti crea livrabile.</div>
+                <div class="notice">Nu exista proiecte deschise pentru care poti adauga livrabile.</div>
             @else
                 <form method="POST" action="{{ route('deliverables.store') }}">
                     @csrf
@@ -25,7 +25,7 @@
                 <div style="margin-bottom:12px;">
                     <label class="label" for="project_id">Proiect</label>
                     <select class="input" id="project_id" name="project_id" required>
-                        <option value="">-- alege proiect --</option>
+                        <option value="">-- selecteaza proiectul --</option>
                         @foreach($projects as $project)
                             <option value="{{ $project->id }}" @selected(old('project_id') == $project->id)>{{ $project->title }}</option>
                         @endforeach
@@ -33,9 +33,9 @@
                 </div>
 
                 <div style="margin-bottom:12px;">
-                    <label class="label" for="milestone_id">Milestone (optional)</label>
+                    <label class="label" for="milestone_id">Etapa asociata (optional)</label>
                     <select class="input" id="milestone_id" name="milestone_id">
-                        <option value="">-- fara milestone --</option>
+                        <option value="">-- fara etapa asociata --</option>
                         @foreach($milestones as $milestone)
                             <option value="{{ $milestone->id }}" @selected(old('milestone_id') == $milestone->id)>{{ $milestone->title }}</option>
                         @endforeach
@@ -54,7 +54,7 @@
 
                 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px;">
                     <div>
-                        <label class="label" for="due_at">Deadline</label>
+                        <label class="label" for="due_at">Termen limita</label>
                         <input class="input" id="due_at" type="datetime-local" name="due_at" value="{{ old('due_at') }}">
                     </div>
                     <div>
@@ -68,13 +68,13 @@
                     <select class="input" id="submission_type" name="submission_type">
                         <option value="file" @selected(old('submission_type') === 'file')>Fisier</option>
                         <option value="link" @selected(old('submission_type') === 'link')>Link</option>
-                        <option value="both" @selected(old('submission_type') === 'both')>Ambele</option>
+                        <option value="both" @selected(old('submission_type') === 'both')>Fisier si link</option>
                     </select>
                 </div>
 
                     <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                        <button type="submit" class="btn btn-primary">Salveaza livrabil</button>
-                        <a href="{{ route('deliverables.index') }}" class="btn btn-secondary">Inapoi</a>
+                        <button type="submit" class="btn btn-primary">Creeaza livrabilul</button>
+                        <a href="{{ route('deliverables.index') }}" class="btn btn-secondary">Inapoi la livrabile</a>
                     </div>
                 </form>
             @endif

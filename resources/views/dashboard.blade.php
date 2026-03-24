@@ -4,10 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Dashboard</title>
-
-    {{-- Dacă ai deja Bootstrap în proiect, scoate CDN-ul --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <style>
         .quick-actions-card {
             border: 0;
@@ -47,15 +44,15 @@
 <div class="container py-4">
     <div class="card quick-actions-card">
         <div class="card-body p-4">
-            <h2 class="qa-title h4 mb-3">Acțiuni rapide</h2>
+            <h2 class="qa-title h4 mb-3">Actiuni rapide</h2>
 
             <div class="d-flex flex-wrap gap-3">
                 <a href="{{ route('projects.create') ?? '#' }}" class="btn btn-primary qa-btn qa-btn-primary">
-                    Creează proiect
+                    Creeaza proiect
                 </a>
 
                 <a href="{{ route('projects.index') ?? '#' }}" class="btn btn-primary qa-btn qa-btn-primary">
-                    Vezi proiecte
+                    Vezi proiectele
                 </a>
 
                 <a href="{{ route('teams.index') ?? '#' }}" class="btn btn-primary qa-btn qa-btn-primary">
@@ -67,12 +64,12 @@
                 </a>
 
                 <a href="{{ route('settings') ?? '#' }}" class="btn qa-btn qa-btn-muted">
-                    Setări
+                    Setari
                 </a>
             </div>
 
             <div class="qa-note">
-                (Link-urile vor deveni active pe măsură ce implementăm modulele Projects/Teams/Deliverables.)
+                Linkurile devin active pe masura ce modulele Projects, Teams si Deliverables sunt configurate.
             </div>
         </div>
     </div>

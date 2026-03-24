@@ -3,62 +3,25 @@
 @section('content')
     <section class="hero">
         <div class="pill">Setari</div>
-        <h1>Configurare aplicatie</h1>
-        <p>Administrare utilizatori si roluri (profesor/student).</p>
+        <h1>Administrare platforma</h1>
+        <p>Gestioneaza conturile utilizatorilor si actiunile administrative esentiale.</p>
     </section>
 
     <section class="grid">
         <div class="card span-12">
-            <h3>Reguli autorizare cont</h3>
-            <p class="muted">Conturile sunt create de administrator, iar rolurile raman doar profesor/student.</p>
-            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px;">
-                <div class="card" style="padding:14px 16px;">
-                    <div class="muted">Administratori</div>
-                    <div style="font-weight:700;margin-top:6px;">
-                        {{ implode(', ', config('uniprojectmanager.admin_emails', [])) ?: 'neconfigurat' }}
-                    </div>
-                </div>
-                <div class="card" style="padding:14px 16px;">
-                    <div class="muted">Domenii profesori</div>
-                    <div style="font-weight:700;margin-top:6px;">
-                        {{ implode(', ', config('uniprojectmanager.professor_domains', [])) ?: 'neconfigurat' }}
-                    </div>
-                </div>
-                <div class="card" style="padding:14px 16px;">
-                    <div class="muted">Whitelist profesori</div>
-                    <div style="font-weight:700;margin-top:6px;">
-                        {{ implode(', ', config('uniprojectmanager.professor_emails', [])) ?: 'neconfigurat' }}
-                    </div>
-                </div>
-                <div class="card" style="padding:14px 16px;">
-                    <div class="muted">Domenii institutionale</div>
-                    <div style="font-weight:700;margin-top:6px;">
-                        {{ implode(', ', config('uniprojectmanager.institutional_domains', [])) ?: 'neconfigurat' }}
-                    </div>
-                </div>
-                <div class="card" style="padding:14px 16px;">
-                    <div class="muted">Domenii studenti</div>
-                    <div style="font-weight:700;margin-top:6px;">
-                        {{ implode(', ', config('uniprojectmanager.student_domains', [])) ?: 'neconfigurat' }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card span-12">
             <h3>Tema interfata</h3>
-            <p class="muted">Poti comuta rapid intre Light si Dark mode pentru contul tau.</p>
+            <p class="muted">Poti comuta rapid intre modul luminos si modul intunecat pentru contul tau.</p>
             <form method="POST" action="{{ route('profile.theme.toggle') }}" style="margin-top:10px;">
                 @csrf
                 <button type="submit" class="btn btn-secondary">
-                    {{ (auth()->user()->theme_preference ?? 'light') === 'dark' ? 'Comuta pe Light mode' : 'Comuta pe Dark mode' }}
+                    {{ (auth()->user()->theme_preference ?? 'light') === 'dark' ? 'Comuta pe modul luminos' : 'Comuta pe modul intunecat' }}
                 </button>
             </form>
         </div>
 
         <div class="card span-12">
             <h3>Creeaza cont</h3>
-            <p class="muted">Doar administratorul poate crea conturi pentru studenti si profesori.</p>
+            <p class="muted">Datele introduse aici sunt trimise direct utilizatorului prin email de bun venit.</p>
             <form method="POST" action="{{ route('settings.users.store') }}" style="margin-top:12px;">
                 @csrf
                 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px;">
@@ -92,7 +55,7 @@
                         <option value="profesor" @selected(old('role', 'student') === 'profesor')>Profesor</option>
                     </select>
                 </div>
-                <button type="submit" class="btn btn-primary">Creeaza cont</button>
+                <button type="submit" class="btn btn-primary">Creeaza contul</button>
             </form>
         </div>
 
@@ -130,7 +93,7 @@
                                         <option value="student" @selected($user->role === 'student')>Student</option>
                                         <option value="profesor" @selected($user->role === 'profesor')>Profesor</option>
                                     </select>
-                                    <button type="submit" class="btn btn-secondary">Salveaza</button>
+                                    <button type="submit" class="btn btn-secondary">Actualizeaza rolul</button>
                                 </div>
                             </form>
                         </td>
@@ -138,17 +101,19 @@
                             <div style="display:flex;gap:8px;flex-wrap:wrap;">
                                 <form method="POST" action="{{ route('settings.users.password-reset-link', $user) }}">
                                     @csrf
-                                    <button type="submit" class="btn btn-secondary">Trimite resetare parola</button>
+                                    <button type="submit" class="btn btn-secondary">Trimite link resetare parola</button>
                                 </form>
 
                                 @if($user->id === auth()->id())
-                                    <span class="muted">cont curent</span>
+                                    <span class="muted">contul curent</span>
+                                @elseif($user->isAdmin())
+                                    <span class="muted">administrator</span>
                                 @else
                                     <form method="POST" action="{{ route('settings.users.destroy', $user) }}">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-danger"
-                                                onclick="return confirm('Stergi utilizatorul?')">Sterge</button>
+                                                onclick="return confirm('Sigur vrei sa elimini acest utilizator?')">Elimina</button>
                                     </form>
                                 @endif
                             </div>

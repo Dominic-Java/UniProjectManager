@@ -2,9 +2,9 @@
 
 @section('content')
     <section class="hero">
-        <div class="pill">Milestone</div>
-        <h1>Editeaza milestone</h1>
-        <p>Actualizeaza detaliile etapei.</p>
+        <div class="pill">Etapa</div>
+        <h1>Actualizeaza etapa</h1>
+        <p>Revizuieste detaliile pentru a pastra calendarul proiectului clar.</p>
     </section>
 
     <section class="grid">
@@ -41,7 +41,7 @@
 
                 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px;">
                     <div>
-                        <label class="label" for="due_at">Deadline</label>
+                        <label class="label" for="due_at">Termen limita</label>
                         <input class="input" id="due_at" type="datetime-local" name="due_at" value="{{ old('due_at', optional($milestone->due_at)->format('Y-m-d\\TH:i')) }}">
                     </div>
                     <div>
@@ -51,8 +51,8 @@
                 </div>
 
                 <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                    <button type="submit" class="btn btn-primary">Salveaza</button>
-                    <a href="{{ route('milestones.show', $milestone) }}" class="btn btn-secondary">Inapoi</a>
+                    <button type="submit" class="btn btn-primary">Salveaza modificarile</button>
+                    <a href="{{ route('milestones.show', $milestone) }}" class="btn btn-secondary">Inapoi la detalii</a>
                 </div>
             </form>
         </div>

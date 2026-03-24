@@ -4,7 +4,7 @@
     <section class="hero">
         <div class="pill">Classroom</div>
         <h1>{{ $classroom->name }}</h1>
-        <p>{{ $classroom->subject }} · Cod acces: <strong>{{ $classroom->code }}</strong></p>
+        <p>{{ $classroom->subject }} - Cod de acces: <strong>{{ $classroom->code }}</strong></p>
     </section>
 
     <section class="grid">
@@ -19,7 +19,7 @@
                 <div class="notice error" style="margin-bottom:12px;">{{ $errors->first() }}</div>
             @endif
 
-            <h3>Despre clasa</h3>
+            <h3>Informatii generale</h3>
             <table class="table">
                 <tbody>
                 <tr>
@@ -38,6 +38,10 @@
                     <th>Descriere</th>
                     <td>{{ $classroom->description ?: '-' }}</td>
                 </tr>
+                <tr>
+                    <th>Status</th>
+                    <td>{{ $classroom->is_active ? 'Activ' : 'Arhivat' }}</td>
+                </tr>
                 </tbody>
             </table>
         </div>
@@ -45,17 +49,35 @@
         <div class="card span-4">
             <h3>Actiuni</h3>
             <div style="display:flex;flex-direction:column;gap:8px;">
-                @if($can_manage)
-                    <a class="btn btn-primary" href="{{ route('projects.create', ['classroom' => $classroom->id]) }}">Creeaza proiect in clasa</a>
+                @if($can_manage && $classroom->is_active)
+                    <a class="btn btn-primary" href="{{ route('projects.create', ['classroom' => $classroom->id]) }}">Creeaza proiect in classroom</a>
                 @endif
-                <a class="btn btn-secondary" href="{{ route('classrooms.index') }}">Inapoi la clase</a>
+                <a class="btn btn-secondary" href="{{ route('classrooms.index') }}">Revino la lista de classroom-uri</a>
+
+                @if($can_manage)
+                    @if($classroom->is_active)
+                        <form method="POST" action="{{ route('classrooms.archive', $classroom) }}">
+                            @csrf
+                            @method('PUT')
+                            <button class="btn btn-secondary" type="submit" onclick="return confirm('Vrei sa arhivezi acest classroom?')">Arhiveaza classroom-ul</button>
+                        </form>
+                    @else
+                        <div class="notice">Classroom-ul este arhivat. Invitatiile noi nu mai pot fi trimise.</div>
+                    @endif
+
+                    <form method="POST" action="{{ route('classrooms.destroy', $classroom) }}">
+                        @csrf
+                        @method('DELETE')
+                        <button class="btn btn-danger" type="submit" onclick="return confirm('Vrei sa elimini definitiv acest classroom?')">Sterge classroom-ul</button>
+                    </form>
+                @endif
             </div>
         </div>
 
         <div class="card span-6">
-            <h3>Studenti si profesori in clasa</h3>
+            <h3>Membrii classroom-ului</h3>
             @if($classroom->members->count() === 0)
-                <div class="notice">Nu exista membri in aceasta clasa.</div>
+                <div class="notice">Nu exista membri inregistrati in acest classroom.</div>
             @else
                 <table class="table">
                     <thead>
@@ -79,9 +101,9 @@
         </div>
 
         <div class="card span-6">
-            <h3>Proiecte in classroom</h3>
+            <h3>Proiecte asociate</h3>
             @if($classroom->projects->count() === 0)
-                <div class="notice">Nu exista proiecte create inca.</div>
+                <div class="notice">Nu exista inca proiecte asociate acestui classroom.</div>
             @else
                 <table class="table">
                     <thead>
@@ -110,27 +132,32 @@
 
         @if($can_manage)
             <div class="card span-12">
-                <h3>Invita studenti in classroom</h3>
-                <form method="POST" action="{{ route('classrooms.invitations.send', $classroom) }}">
-                    @csrf
-                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
-                        <div>
-                            <label class="label" for="email">Email student</label>
-                            <input class="input" id="email" type="email" name="email" value="{{ old('email') }}" required>
+                <h3>Invita studenti</h3>
+                @if($classroom->is_active)
+                    <form method="POST" action="{{ route('classrooms.invitations.send', $classroom) }}">
+                        @csrf
+                        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+                            <div>
+                                <label class="label" for="emails">Emailuri studenti</label>
+                                <textarea class="input" id="emails" name="emails" rows="4" placeholder="student1@ulbs.ro&#10;student2@ulbs.ro&#10;sau separate prin virgula" required>{{ old('emails', old('email')) }}</textarea>
+                            </div>
+                            <div>
+                                <label class="label" for="message">Mesaj (optional)</label>
+                                <input class="input" id="message" type="text" name="message" value="{{ old('message') }}">
+                                <p class="muted" style="margin-top:8px;">Poti adauga mai multe adrese in acelasi formular.</p>
+                            </div>
                         </div>
-                        <div>
-                            <label class="label" for="message">Mesaj (optional)</label>
-                            <input class="input" id="message" type="text" name="message" value="{{ old('message') }}">
-                        </div>
-                    </div>
-                    <button class="btn btn-primary" type="submit" style="margin-top:10px;">Trimite invitatie</button>
-                </form>
+                        <button class="btn btn-primary" type="submit" style="margin-top:10px;">Trimite invitatiile</button>
+                    </form>
+                @else
+                    <div class="notice">Classroom-ul este arhivat. Pentru invitatii noi, reactiveaza un classroom activ.</div>
+                @endif
             </div>
 
             <div class="card span-12">
                 <h3>Istoric invitatii</h3>
                 @if($invitations->count() === 0)
-                    <div class="notice">Nu exista invitatii trimise inca.</div>
+                    <div class="notice">Nu exista invitatii trimise pana acum.</div>
                 @else
                     <table class="table">
                         <thead>
@@ -154,10 +181,10 @@
                                         <form method="POST" action="{{ route('classrooms.invitations.cancel', $invitation) }}">
                                             @csrf
                                             @method('DELETE')
-                                            <button class="btn btn-danger btn-sm" type="submit">Anuleaza</button>
+                                            <button class="btn btn-danger btn-sm" type="submit">Anuleaza invitatia</button>
                                         </form>
                                     @else
-                                        <span class="muted">finalizata</span>
+                                        <span class="muted">procesata</span>
                                     @endif
                                 </td>
                             </tr>

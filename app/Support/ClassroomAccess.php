@@ -13,7 +13,15 @@ class ClassroomAccess
 {
     public static function canManageClassroom(?User $user, Classroom $classroom): bool
     {
-        if (!$user || !$user->hasRole('profesor')) {
+        if (!$user) {
+            return false;
+        }
+
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if (!$user->hasRole('profesor')) {
             return false;
         }
 
@@ -30,6 +38,10 @@ class ClassroomAccess
             return true;
         }
 
+        if ($user->hasRole('profesor')) {
+            return false;
+        }
+
         return DB::table('classroom_members')
             ->where('classroom_id', $classroom->id)
             ->where('user_id', $user->id)
@@ -38,7 +50,15 @@ class ClassroomAccess
 
     public static function canManageProject(?User $user, Project $project): bool
     {
-        if (!$user || !$user->hasRole('profesor')) {
+        if (!$user) {
+            return false;
+        }
+
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if (!$user->hasRole('profesor')) {
             return false;
         }
 
@@ -52,7 +72,15 @@ class ClassroomAccess
 
     public static function canUploadClasswork(?User $user, Project $project): bool
     {
-        if (!$user || !$user->hasRole('profesor')) {
+        if (!$user) {
+            return false;
+        }
+
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if (!$user->hasRole('profesor')) {
             return false;
         }
 
@@ -103,6 +131,10 @@ class ClassroomAccess
 
     public static function scopeVisibleProjects(Builder $query, User $user): Builder
     {
+        if ($user->isAdmin()) {
+            return $query;
+        }
+
         if ($user->hasRole('profesor')) {
             return self::scopeTeachableProjects($query, $user);
         }
@@ -122,6 +154,10 @@ class ClassroomAccess
 
     public static function scopeManageableProjects(Builder $query, User $user): Builder
     {
+        if ($user->isAdmin()) {
+            return $query;
+        }
+
         return $query->where(function (Builder $subQuery) use ($user): void {
             $subQuery->where(function (Builder $classroomQuery) use ($user): void {
                 $classroomQuery
@@ -137,6 +173,10 @@ class ClassroomAccess
 
     public static function scopeTeachableProjects(Builder $query, User $user): Builder
     {
+        if ($user->isAdmin()) {
+            return $query;
+        }
+
         return $query->where(function (Builder $subQuery) use ($user): void {
             self::scopeManageableProjects($subQuery, $user)
                 ->orWhere(function (Builder $staffQuery) use ($user): void {

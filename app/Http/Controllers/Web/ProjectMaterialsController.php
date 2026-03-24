@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\ProjectMaterial;
+use App\Services\Projects\ProjectNotificationService;
 use App\Services\Security\AuditLogger;
 use App\Support\ClassroomAccess;
 use Illuminate\Http\RedirectResponse;
@@ -15,18 +16,27 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProjectMaterialsController extends Controller
 {
-    public function store(Request $request, Project $project): RedirectResponse
+    public function store(
+        Request $request,
+        Project $project,
+        ProjectNotificationService $projectNotificationService
+    ): RedirectResponse
     {
         abort_unless($request->user()?->hasRole('profesor'), 403);
         abort_unless(ClassroomAccess::canUploadClasswork($request->user(), $project), 403);
 
         if ($project->isLocked()) {
-            return back()->with('error', 'Proiectul este inchis dupa deadline. Nu mai poti adauga materiale.');
+            return back()->with('error', 'Proiectul este inchis dupa termen. Nu mai poti adauga materiale.');
         }
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:200'],
-            'material_file' => ['required', 'file', 'max:51200'],
+            'material_file' => [
+                'required',
+                'file',
+                'mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,txt,csv,zip,rar,7z,png,jpg,jpeg,gif,webp,bmp',
+                'max:51200',
+            ],
         ]);
 
         $file = $validated['material_file'];
@@ -56,7 +66,18 @@ class ProjectMaterialsController extends Controller
             'material_title' => $material->title,
         ]);
 
-        return back()->with('success', 'Materialul a fost incarcat.');
+        try {
+            $projectNotificationService->notifyMaterialUploaded($project, $material, $request->user());
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            AuditLogger::log('projects.material.notification.failed', $request->user(), 'project_material', $material->id, [
+                'project_id' => $project->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return back()->with('success', 'Materialul a fost incarcat cu succes.');
     }
 
     public function download(Request $request, ProjectMaterial $material): StreamedResponse|RedirectResponse
@@ -66,7 +87,7 @@ class ProjectMaterialsController extends Controller
         abort_unless($material->project && ClassroomAccess::canAccessProject($request->user(), $material->project), 403);
 
         if (!Storage::disk('local')->exists($material->file_path)) {
-            return back()->with('error', 'Materialul nu mai exista in storage.');
+            return back()->with('error', 'Materialul cautat nu mai este disponibil in sistem.');
         }
 
         AuditLogger::log('projects.material.download', $request->user(), 'project_material', $material->id, [
@@ -83,7 +104,7 @@ class ProjectMaterialsController extends Controller
         $material->loadMissing('project');
         abort_unless($material->project && ClassroomAccess::canUploadClasswork($request->user(), $material->project), 403);
         if ($material->project?->isLocked()) {
-            return back()->with('error', 'Proiectul este inchis dupa deadline. Nu mai poti sterge materiale.');
+            return back()->with('error', 'Proiectul este inchis dupa termen. Nu mai poti elimina materiale.');
         }
 
         if (Storage::disk('local')->exists($material->file_path)) {
@@ -98,6 +119,6 @@ class ProjectMaterialsController extends Controller
             'project_id' => $projectId,
         ]);
 
-        return back()->with('success', 'Materialul a fost sters.');
+        return back()->with('success', 'Materialul a fost eliminat.');
     }
 }

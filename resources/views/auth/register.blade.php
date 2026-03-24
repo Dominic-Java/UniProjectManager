@@ -2,9 +2,9 @@
 
 @section('content')
     <section class="hero">
-        <div class="pill">Cont nou</div>
-        <h1>Inregistrare utilizator</h1>
-        <p>Creeaza un cont pentru a accesa proiectele universitare.</p>
+        <div class="pill">Creare cont</div>
+        <h1>Completeaza datele contului</h1>
+        <p>Formularul pregateste contul tau pentru activitatea academica din platforma.</p>
     </section>
 
     <section class="grid">
@@ -39,14 +39,14 @@
                         <label class="label" for="password">Parola</label>
                         <div style="display:flex;gap:8px;align-items:center;">
                             <input class="input" id="password" type="password" name="password" required>
-                            <button type="button" class="btn btn-outline btn-sm" data-toggle-password="password">Afiseaza</button>
+                            <button type="button" class="btn btn-outline btn-sm" data-toggle-password="password">Arata</button>
                         </div>
                     </div>
                     <div>
                         <label class="label" for="password_confirmation">Confirmare parola</label>
                         <div style="display:flex;gap:8px;align-items:center;">
                             <input class="input" id="password_confirmation" type="password" name="password_confirmation" required>
-                            <button type="button" class="btn btn-outline btn-sm" data-toggle-password="password_confirmation">Afiseaza</button>
+                            <button type="button" class="btn btn-outline btn-sm" data-toggle-password="password_confirmation">Arata</button>
                         </div>
                     </div>
                 </div>
@@ -60,16 +60,16 @@
                 </div>
 
                 <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
-                    <button type="submit" class="btn btn-primary">Creeaza cont</button>
+                    <button type="submit" class="btn btn-primary">Finalizeaza crearea contului</button>
                     <a href="{{ route('login') }}" class="btn btn-secondary">Am deja cont</a>
                 </div>
             </form>
         </div>
 
         <div class="card span-4">
-            <h3>Acces</h3>
-            <p class="muted">Studentii si profesorii se pot inregistra cu emailuri publice si institutionale.</p>
-            <p class="muted">Institutional: {{ implode(', ', config('uniprojectmanager.institutional_domains', [])) ?: 'neconfigurat' }}.</p>
+            <h3>Informatii utile</h3>
+            <p class="muted">Foloseste o adresa de email valida pentru rolul selectat.</p>
+            <p class="muted">Domenii institutionale acceptate: {{ implode(', ', config('uniprojectmanager.institutional_domains', [])) ?: 'neconfigurat' }}.</p>
         </div>
     </section>
 @endsection

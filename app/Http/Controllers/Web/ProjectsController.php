@@ -9,6 +9,7 @@ use App\Services\Projects\ProjectNotificationService;
 use App\Services\Projects\ProjectsService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use App\Services\Security\AuditLogger;
 use App\Support\ClassroomAccess;
 
@@ -28,11 +29,15 @@ class ProjectsController extends Controller
     {
         abort_unless(auth()->user()?->hasRole('profesor'), 403);
 
-        $classrooms = Classroom::query()
-            ->where('created_by', $request->user()->id)
+        $classroomsQuery = Classroom::query()
             ->orderBy('subject')
-            ->orderBy('name')
-            ->get();
+            ->orderBy('name');
+
+        if (!$request->user()->isAdmin()) {
+            $classroomsQuery->where('created_by', $request->user()->id);
+        }
+
+        $classrooms = $classroomsQuery->get();
 
         return view('projects.create', [
             'title' => 'Creeaza proiect',
@@ -44,6 +49,7 @@ class ProjectsController extends Controller
     public function store(Request $request)
     {
         abort_unless(auth()->user()?->hasRole('profesor'), 403);
+        $this->mergeDeadlineAtFrom24HourInputs($request);
 
         $validated = $request->validate([
             'classroom_id' => ['required', 'exists:classrooms,id'],
@@ -111,11 +117,15 @@ class ProjectsController extends Controller
     {
         abort_unless(ClassroomAccess::canManageProject(auth()->user(), $project), 403);
 
-        $classrooms = Classroom::query()
-            ->where('created_by', auth()->id())
+        $classroomsQuery = Classroom::query()
             ->orderBy('subject')
-            ->orderBy('name')
-            ->get();
+            ->orderBy('name');
+
+        if (!auth()->user()?->isAdmin()) {
+            $classroomsQuery->where('created_by', auth()->id());
+        }
+
+        $classrooms = $classroomsQuery->get();
 
         return view('projects.edit', [
             'title' => 'Editeaza proiect',
@@ -127,6 +137,7 @@ class ProjectsController extends Controller
     public function update(Request $request, Project $project)
     {
         abort_unless(ClassroomAccess::canManageProject(auth()->user(), $project), 403);
+        $this->mergeDeadlineAtFrom24HourInputs($request);
 
         $validated = $request->validate([
             'classroom_id' => ['nullable', 'exists:classrooms,id'],
@@ -155,7 +166,7 @@ class ProjectsController extends Controller
         $project->update($validated);
         AuditLogger::log('projects.update', $request->user(), 'project', $project->id);
 
-        return redirect()->route('projects.show', $project)->with('success', 'Proiectul a fost actualizat.');
+        return redirect()->route('projects.show', $project)->with('success', 'Modificarile proiectului au fost salvate.');
     }
 
     public function destroy(Project $project)
@@ -166,6 +177,39 @@ class ProjectsController extends Controller
         $project->delete();
         AuditLogger::log('projects.delete', request()->user(), 'project', $projectId);
 
-        return redirect()->route('projects.index')->with('success', 'Proiectul a fost sters.');
+        return redirect()->route('projects.index')->with('success', 'Proiectul a fost eliminat.');
+    }
+
+    private function mergeDeadlineAtFrom24HourInputs(Request $request): void
+    {
+        $hasDateField = $request->exists('deadline_date');
+        $hasTimeField = $request->exists('deadline_time');
+        if (!$hasDateField && !$hasTimeField) {
+            return;
+        }
+
+        $deadlineDate = trim((string) $request->input('deadline_date', ''));
+        $deadlineTime = trim((string) $request->input('deadline_time', ''));
+
+        if ($deadlineDate === '' && $deadlineTime === '') {
+            $request->merge(['deadline_at' => null]);
+            return;
+        }
+
+        if ($deadlineDate === '' || $deadlineTime === '') {
+            throw ValidationException::withMessages([
+                'deadline_time' => 'Completeaza atat data, cat si ora termenului limita (format HH:MM).',
+            ]);
+        }
+
+        if (!preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $deadlineTime)) {
+            throw ValidationException::withMessages([
+                'deadline_time' => 'Ora introdusa nu este valida. Foloseste formatul HH:MM.',
+            ]);
+        }
+
+        $request->merge([
+            'deadline_at' => $deadlineDate . ' ' . $deadlineTime . ':00',
+        ]);
     }
 }

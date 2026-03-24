@@ -14,7 +14,7 @@
             @endif
             @if ($project->isLocked())
                 <div class="notice error" style="margin-bottom:12px;">
-                    Proiect inchis: deadline-ul a fost depasit sau statusul este deja closed/archived.
+                    Proiectul este inchis: termenul a fost depasit sau statusul a fost setat pe closed/archived.
                 </div>
             @endif
 
@@ -72,15 +72,15 @@
             <h3>Actiuni</h3>
             <div style="display:flex;flex-direction:column;gap:8px;">
                 @if($can_manage)
-                    <a class="btn btn-secondary" href="{{ route('projects.edit', $project) }}">Editeaza proiect</a>
+                    <a class="btn btn-secondary" href="{{ route('projects.edit', $project) }}">Editeaza proiectul</a>
                 @endif
-                <a class="btn btn-secondary" href="{{ route('projects.index') }}">Inapoi la lista</a>
+                <a class="btn btn-secondary" href="{{ route('projects.index') }}">Revino la lista proiectelor</a>
             </div>
         </div>
 
         <div class="card span-4">
             <h3>Echipe</h3>
-            <p class="muted">{{ $project->teams->count() }} echipe asociate</p>
+            <p class="muted">{{ $project->teams->count() }} echipe asociate proiectului</p>
             <ul>
                 @foreach($project->teams->take(5) as $team)
                     <li>{{ $team->name }} ({{ $team->status }})</li>
@@ -90,7 +90,7 @@
 
         <div class="card span-4">
             <h3>Milestones</h3>
-            <p class="muted">{{ $project->milestones->count() }} etape</p>
+            <p class="muted">{{ $project->milestones->count() }} etape planificate</p>
             <ul>
                 @foreach($project->milestones->take(5) as $ms)
                     <li>{{ $ms->title }} ({{ $ms->due_at ?? '-' }})</li>
@@ -100,7 +100,7 @@
 
         <div class="card span-4">
             <h3>Livrabile</h3>
-            <p class="muted">{{ $project->deliverables->count() }} livrabile</p>
+            <p class="muted">{{ $project->deliverables->count() }} livrabile definite</p>
             <ul>
                 @foreach($project->deliverables->take(5) as $del)
                     <li>{{ $del->title }} ({{ $del->due_at ?? '-' }})</li>
@@ -110,12 +110,12 @@
 
         <div class="card span-12">
             <h3>Classwork - Materiale</h3>
-            <p class="muted">Aici poti adauga suport de curs, exemple, cerinte sau alte resurse pentru echipe.</p>
+            <p class="muted">Adauga aici suport de curs, exemple, cerinte sau alte resurse utile pentru echipe.</p>
 
             @if($can_upload_materials)
                 @if($project->isLocked())
                     <div class="notice error" style="margin-bottom:12px;">
-                        Proiectul este inchis dupa deadline. Nu mai poti incarca materiale noi.
+                        Proiectul este inchis dupa deadline. Incarcarea de materiale noi nu mai este disponibila.
                     </div>
                 @else
                     <form method="POST" action="{{ route('projects.materials.store', $project) }}" enctype="multipart/form-data" style="margin-bottom:14px;">
@@ -131,14 +131,14 @@
                             </div>
                         </div>
                         <div style="margin-top:10px;">
-                            <button type="submit" class="btn btn-primary">Incarca material</button>
+                            <button type="submit" class="btn btn-primary">Incarca materialul</button>
                         </div>
                     </form>
                 @endif
             @endif
 
             @if($project->materials->count() === 0)
-                <div class="notice">Nu exista materiale incarcate inca.</div>
+                <div class="notice">Nu exista materiale incarcate inca pentru acest proiect.</div>
             @else
                 <table class="table">
                     <thead>
@@ -164,7 +164,7 @@
                                         <form method="POST" action="{{ route('projects.materials.destroy', $material) }}">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Stergi materialul?')">Sterge</button>
+                                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Vrei sa stergi acest material?')">Sterge</button>
                                         </form>
                                     @endif
                                 </div>
@@ -179,7 +179,7 @@
         <div class="card span-6">
             <h3>Cerinte proiect</h3>
             @if($project->requirements->count() === 0)
-                <div class="notice">Nu exista cerinte inregistrate.</div>
+                <div class="notice">Nu exista cerinte inregistrate pentru acest proiect.</div>
             @else
                 <ul>
                     @foreach($project->requirements->take(5) as $req)
@@ -192,7 +192,7 @@
         <div class="card span-6">
             <h3>Staff</h3>
             @if($project->staff->count() === 0)
-                <div class="notice">Nu exista profesori asignati.</div>
+                <div class="notice">Nu exista cadre didactice asociate suplimentar acestui proiect.</div>
             @else
                 <ul>
                     @foreach($project->staff->take(5) as $staff)

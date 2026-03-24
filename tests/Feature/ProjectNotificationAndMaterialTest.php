@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Mail\NewProjectCreatedMail;
+use App\Mail\ProjectMaterialUploadedMail;
 use App\Models\Classroom;
 use App\Models\Project;
 use App\Models\ProjectMaterial;
@@ -190,5 +191,69 @@ class ProjectNotificationAndMaterialTest extends TestCase
             'title' => 'Laborator 2',
             'uploaded_by' => $teacherProfessor->id,
         ]);
+    }
+
+    public function test_uploading_project_material_sends_email_to_classroom_members_except_uploader(): void
+    {
+        Mail::fake();
+        Storage::fake('local');
+
+        $professor = User::factory()->create(['role' => 'profesor']);
+        $student = User::factory()->create(['role' => 'student']);
+
+        $classroom = Classroom::create([
+            'code' => Classroom::generateCode(),
+            'name' => 'Clasa WEB',
+            'subject' => 'Programare Web',
+            'created_by' => $professor->id,
+            'is_active' => true,
+        ]);
+
+        DB::table('classroom_members')->insert([
+            [
+                'classroom_id' => $classroom->id,
+                'user_id' => $professor->id,
+                'role' => 'teacher',
+                'joined_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'classroom_id' => $classroom->id,
+                'user_id' => $student->id,
+                'role' => 'student',
+                'joined_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $project = Project::create([
+            'title' => 'Platforma licenta',
+            'description' => 'Descriere proiect',
+            'domain' => 'Programare Web',
+            'classroom_id' => $classroom->id,
+            'status' => 'open',
+            'visibility' => 'public',
+            'min_team_size' => 1,
+            'max_team_size' => 5,
+            'created_by' => $professor->id,
+        ]);
+
+        $this->actingAs($professor)
+            ->post(route('projects.materials.store', $project), [
+                'title' => 'Curs 2',
+                'material_file' => UploadedFile::fake()->create('curs2.pdf', 240),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        Mail::assertSent(ProjectMaterialUploadedMail::class, function (ProjectMaterialUploadedMail $mail) use ($student, $project): bool {
+            return $mail->hasTo($student->email) && $mail->project->id === $project->id;
+        });
+
+        Mail::assertNotSent(ProjectMaterialUploadedMail::class, function (ProjectMaterialUploadedMail $mail) use ($professor): bool {
+            return $mail->hasTo($professor->email);
+        });
     }
 }

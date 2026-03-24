@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Mail\ClassroomInvitationMail;
 use App\Mail\ClassroomJoinedConfirmationMail;
 use App\Models\Classroom;
 use App\Models\ClassroomInvitation;
 use App\Models\Project;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -56,6 +58,12 @@ class ClassroomFlowAndAccessTest extends TestCase
         $this->assertNotNull($invitation);
         $this->assertSame('pending', $invitation->status);
 
+        Mail::assertSent(ClassroomInvitationMail::class, function (ClassroomInvitationMail $mail) use ($student, $classroom, $professor): bool {
+            return $mail->hasTo($student->email)
+                && $mail->classroom->id === $classroom->id
+                && $mail->invitedBy->id === $professor->id;
+        });
+
         $this->actingAs($student)
             ->post(route('classrooms.invitations.respond', $invitation), [
                 'action' => 'accept',
@@ -73,6 +81,94 @@ class ClassroomFlowAndAccessTest extends TestCase
                 && $mail->classroom->id === $classroom->id
                 && $mail->joinedVia === 'invitation';
         });
+    }
+
+    public function test_professor_can_send_bulk_invitations_to_multiple_students(): void
+    {
+        Mail::fake();
+
+        $professor = User::factory()->create(['role' => 'profesor']);
+        $studentOne = User::factory()->create(['role' => 'student']);
+        $studentTwo = User::factory()->create(['role' => 'student']);
+
+        $classroom = Classroom::create([
+            'code' => Classroom::generateCode(),
+            'name' => 'Clasa Web',
+            'subject' => 'Programare Web',
+            'created_by' => $professor->id,
+            'is_active' => true,
+        ]);
+
+        DB::table('classroom_members')->insert([
+            'classroom_id' => $classroom->id,
+            'user_id' => $professor->id,
+            'role' => 'teacher',
+            'joined_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($professor)
+            ->post(route('classrooms.invitations.send', $classroom), [
+                'emails' => $studentOne->email . "\n" . $studentTwo->email,
+                'message' => 'Va astept la urmatorul laborator.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('classroom_invitations', [
+            'classroom_id' => $classroom->id,
+            'student_user_id' => $studentOne->id,
+            'status' => 'pending',
+        ]);
+        $this->assertDatabaseHas('classroom_invitations', [
+            'classroom_id' => $classroom->id,
+            'student_user_id' => $studentTwo->id,
+            'status' => 'pending',
+        ]);
+
+        Mail::assertSent(ClassroomInvitationMail::class, 2);
+    }
+
+    public function test_professor_can_archive_and_delete_owned_classroom(): void
+    {
+        $professor = User::factory()->create(['role' => 'profesor']);
+
+        $classroom = Classroom::create([
+            'code' => Classroom::generateCode(),
+            'name' => 'Clasa de arhivat',
+            'subject' => 'Sisteme distribuite',
+            'created_by' => $professor->id,
+            'is_active' => true,
+        ]);
+
+        DB::table('classroom_members')->insert([
+            'classroom_id' => $classroom->id,
+            'user_id' => $professor->id,
+            'role' => 'teacher',
+            'joined_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($professor)
+            ->put(route('classrooms.archive', $classroom))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('classrooms', [
+            'id' => $classroom->id,
+            'is_active' => 0,
+        ]);
+
+        $this->actingAs($professor)
+            ->delete(route('classrooms.destroy', $classroom))
+            ->assertRedirect(route('classrooms.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('classrooms', [
+            'id' => $classroom->id,
+        ]);
     }
 
     public function test_student_can_join_classroom_by_code(): void
@@ -167,6 +263,73 @@ class ClassroomFlowAndAccessTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_admin_can_access_projects_and_teams_from_all_professors(): void
+    {
+        config()->set('uniprojectmanager.admin_emails', ['admin@ulbs.ro']);
+
+        $admin = User::factory()->create([
+            'email' => 'admin@ulbs.ro',
+            'role' => 'profesor',
+        ]);
+        $ownerProfessor = User::factory()->create([
+            'email' => 'owner.prof@ulbs.ro',
+            'role' => 'profesor',
+        ]);
+
+        $classroom = Classroom::create([
+            'code' => Classroom::generateCode(),
+            'name' => 'Clasa Admin Access',
+            'subject' => 'Sisteme de operare',
+            'created_by' => $ownerProfessor->id,
+            'is_active' => true,
+        ]);
+
+        $project = Project::create([
+            'title' => 'Proiect cross-profesor',
+            'description' => 'Test pentru acces admin global.',
+            'domain' => 'Sisteme de operare',
+            'classroom_id' => $classroom->id,
+            'status' => 'open',
+            'visibility' => 'public',
+            'min_team_size' => 1,
+            'max_team_size' => 4,
+            'created_by' => $ownerProfessor->id,
+        ]);
+
+        $team = Team::create([
+            'project_id' => $project->id,
+            'name' => 'Echipa globala',
+            'status' => 'active',
+            'created_by' => $ownerProfessor->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('projects.index'))
+            ->assertOk()
+            ->assertSee('Proiect cross-profesor');
+
+        $this->actingAs($admin)
+            ->get(route('projects.show', $project))
+            ->assertOk();
+
+        $this->actingAs($admin)
+            ->get(route('projects.edit', $project))
+            ->assertOk();
+
+        $this->actingAs($admin)
+            ->get(route('teams.index'))
+            ->assertOk()
+            ->assertSee('Echipa globala');
+
+        $this->actingAs($admin)
+            ->get(route('teams.show', $team))
+            ->assertOk();
+
+        $this->actingAs($admin)
+            ->get(route('teams.edit', $team))
+            ->assertOk();
+    }
+
     public function test_user_can_toggle_theme_preference(): void
     {
         $user = User::factory()->create([
@@ -197,5 +360,64 @@ class ClassroomFlowAndAccessTest extends TestCase
             ->assertRedirect(route('dashboard'));
 
         $this->assertSame('dark', $user->fresh()->theme_preference);
+    }
+
+    public function test_professor_sees_only_owned_classrooms_and_cannot_open_other_professor_classroom(): void
+    {
+        $ownerProfessor = User::factory()->create(['role' => 'profesor']);
+        $otherProfessor = User::factory()->create(['role' => 'profesor']);
+
+        $ownerClassroom = Classroom::create([
+            'code' => Classroom::generateCode(),
+            'name' => 'Clasa B',
+            'subject' => 'Baze de date',
+            'created_by' => $ownerProfessor->id,
+            'is_active' => true,
+        ]);
+
+        $otherClassroom = Classroom::create([
+            'code' => Classroom::generateCode(),
+            'name' => 'Clasa C',
+            'subject' => 'Cloud',
+            'created_by' => $otherProfessor->id,
+            'is_active' => true,
+        ]);
+
+        DB::table('classroom_members')->insert([
+            [
+                'classroom_id' => $ownerClassroom->id,
+                'user_id' => $ownerProfessor->id,
+                'role' => 'teacher',
+                'joined_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'classroom_id' => $ownerClassroom->id,
+                'user_id' => $otherProfessor->id,
+                'role' => 'teacher',
+                'joined_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'classroom_id' => $otherClassroom->id,
+                'user_id' => $otherProfessor->id,
+                'role' => 'teacher',
+                'joined_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $this->actingAs($otherProfessor)
+            ->get(route('classrooms.index'))
+            ->assertOk()
+            ->assertSee('Clasa C')
+            ->assertDontSee('Clasa B');
+
+        $this->actingAs($otherProfessor)
+            ->get(route('classrooms.show', $ownerClassroom))
+            ->assertForbidden();
     }
 }

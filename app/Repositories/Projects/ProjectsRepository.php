@@ -55,12 +55,12 @@ final class ProjectsRepository
     public function create(array $payload): array
     {
         if (!Schema::hasTable('projects')) {
-            return ['ok' => false, 'message' => 'Tabela projects nu exista in baza de date.'];
+            return ['ok' => false, 'message' => 'Structura proiectelor nu este disponibila momentan. Contacteaza administratorul.'];
         }
 
         $columns = $this->availableColumns('projects', array_keys($payload));
         if (count($columns) === 0) {
-            return ['ok' => false, 'message' => 'Nu am gasit coloane compatibile in tabela projects.'];
+            return ['ok' => false, 'message' => 'Datele transmise nu pot fi salvate in structura curenta a proiectelor.'];
         }
 
         $data = [];
@@ -78,7 +78,7 @@ final class ProjectsRepository
 
         return [
             'ok' => true,
-            'message' => 'Proiect salvat cu succes.',
+            'message' => 'Proiectul a fost creat cu succes.',
             'project_id' => $projectId,
         ];
     }

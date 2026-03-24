@@ -18,26 +18,26 @@ class HomeService
         $displayName = $user?->first_name ?: $user?->name ?: 'utilizator';
 
         $quickActions = [
-            ['label' => 'Classroom-uri', 'href' => '/classrooms'],
-            ['label' => 'Vezi proiecte', 'href' => '/projects'],
+            ['label' => 'Classroom-urile mele', 'href' => '/classrooms'],
+            ['label' => 'Proiecte active', 'href' => '/projects'],
             ['label' => 'Echipe', 'href' => '/teams'],
             ['label' => 'Livrabile', 'href' => '/deliverables'],
         ];
 
         if ($user && $user->hasRole('profesor')) {
-            array_unshift($quickActions, ['label' => 'Creeaza classroom', 'href' => '/classrooms/create']);
+            array_unshift($quickActions, ['label' => 'Creeaza un classroom', 'href' => '/classrooms/create']);
         }
 
         return [
             'title' => 'UniProjectManager',
-            'subtitle' => 'Bun venit ' . $displayName . '! Esti gata de un nou proiect?',
+            'subtitle' => 'Bine ai revenit, ' . $displayName . '.',
             'quick_actions' => $quickActions,
             'stats' => $stats,
             'recent_projects' => $this->normalizeProjects($recentProjects),
             'announcements' => [
-                'Adauga primul proiect si defineste etapele.',
-                'Creeaza echipe si asociaza studentii.',
-                'Incarca livrabile si ofera feedback.',
+                'Planifica proiectele noi pentru clasele active.',
+                'Revizuieste echipele si invitatiile in asteptare.',
+                'Verifica livrabilele care se apropie de termen.',
             ],
         ];
     }
@@ -49,19 +49,19 @@ class HomeService
         $displayName = $user?->first_name ?: $user?->name ?: 'utilizator';
 
         return [
-            'title' => 'Student Dashboard',
-            'subtitle' => 'Bun venit ' . $displayName . '! Esti gata de un nou proiect?',
+            'title' => 'Panou student',
+            'subtitle' => 'Bine ai revenit, ' . $displayName . '.',
             'highlights' => [
-                'Urmeaza livrabilele din proiecte.',
-                'Colaboreaza cu echipa ta.',
-                'Vezi feedbackul profesorilor.',
+                'Urmareste livrabilele cu termen apropiat.',
+                'Ramai conectat la activitatea echipei tale.',
+                'Consulta feedback-ul primit la predari.',
             ],
             'recent_projects' => $this->normalizeProjects($recentProjects),
             'actions' => [
                 ['label' => 'Classroom-urile mele', 'href' => '/classrooms'],
-                ['label' => 'Vezi proiecte', 'href' => '/projects'],
-                ['label' => 'Echipele mele', 'href' => '/teams'],
-                ['label' => 'Livrabile', 'href' => '/deliverables'],
+                ['label' => 'Proiectele mele', 'href' => '/projects'],
+                ['label' => 'Echipa mea', 'href' => '/teams'],
+                ['label' => 'Predari si livrabile', 'href' => '/deliverables'],
             ],
         ];
     }

@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Auth\PasswordResetService;
+use App\Services\Auth\WelcomeMailService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 use App\Services\Security\AuditLogger;
 
@@ -35,19 +37,23 @@ class AuthController extends Controller
         if (!$user || !Hash::check($credentials['password'], $user->password_hash)) {
             return back()
                 ->withInput($request->only('email', 'role'))
-                ->withErrors(['email' => 'Credentiale invalide.']);
+                ->withErrors(['email' => 'Emailul sau parola nu sunt corecte. Te rugam sa verifici datele introduse.']);
         }
 
         if ($user->role !== $credentials['role']) {
             return back()
                 ->withInput($request->only('email', 'role'))
-                ->withErrors(['email' => 'Rolul selectat nu corespunde contului.']);
+                ->withErrors(['email' => 'Rolul selectat nu corespunde acestui cont. Alege rolul corect si incearca din nou.']);
         }
 
         if (!$user->is_active) {
             return back()
                 ->withInput($request->only('email', 'role'))
-                ->withErrors(['email' => 'Contul este dezactivat.']);
+                ->withErrors(['email' => 'Contul este momentan dezactivat. Contacteaza administratorul pentru reactivare.']);
+        }
+
+        if (Hash::needsRehash($user->password_hash)) {
+            $user->update(['password_hash' => Hash::make($credentials['password'])]);
         }
 
         Auth::login($user);
@@ -74,13 +80,13 @@ class AuthController extends Controller
         return view('auth.register', ['title' => 'Inregistrare']);
     }
 
-    public function register(Request $request): RedirectResponse
+    public function register(Request $request, WelcomeMailService $welcomeMailService): RedirectResponse
     {
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255'],
-            'password' => ['required', 'confirmed', 'min:8'],
+            'password' => ['required', 'confirmed', Password::min(10)->letters()->mixedCase()->numbers()->symbols()],
             'role' => ['required', 'in:student,profesor'],
         ]);
 
@@ -94,7 +100,7 @@ class AuthController extends Controller
         if (User::where('email', $validated['email'])->exists()) {
             return back()
                 ->withInput($request->except(['password', 'password_confirmation']))
-                ->withErrors(['email' => 'Nu s-a putut crea contul cu datele furnizate.']);
+                ->withErrors(['email' => 'Exista deja un cont asociat acestei adrese de email.']);
         }
 
         $user = User::create([
@@ -106,6 +112,9 @@ class AuthController extends Controller
             'member_code' => User::generateMemberCode($validated['role']),
             'theme_preference' => $this->resolveThemeFromRequest($request) ?? 'light',
         ]);
+
+        $welcomeMailService->sendWelcomeMail($user);
+
         Auth::login($user);
         $request->session()->regenerate();
         AuditLogger::log('auth.register', $user, 'user', $user->id, ['role' => $user->role]);
@@ -147,7 +156,7 @@ class AuthController extends Controller
             }
         }
 
-        return back()->with('status', 'Daca emailul exista, vei primi un link de resetare.');
+        return back()->with('status', 'Daca adresa exista in sistem, vei primi in scurt timp un link de resetare.');
     }
 
     public function showResetPassword(Request $request): View
@@ -171,7 +180,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'token' => ['required', 'string'],
             'email' => ['required', 'email'],
-            'password' => ['required', 'confirmed', 'min:8'],
+            'password' => ['required', 'confirmed', Password::min(10)->letters()->mixedCase()->numbers()->symbols()],
         ]);
         $validated['email'] = strtolower($validated['email']);
 
@@ -180,7 +189,7 @@ class AuthController extends Controller
             ->first();
 
         if (!$record) {
-            return back()->withErrors(['email' => 'Token invalid sau expirat.']);
+            return back()->withErrors(['email' => 'Linkul de resetare este invalid sau a expirat. Solicita un link nou.']);
         }
 
         $tokenMatches = hash('sha256', $validated['token']) === $record->token;
@@ -189,12 +198,12 @@ class AuthController extends Controller
             : true;
 
         if (!$tokenMatches || $tokenExpired) {
-            return back()->withErrors(['email' => 'Token invalid sau expirat.']);
+            return back()->withErrors(['email' => 'Linkul de resetare este invalid sau a expirat. Solicita un link nou.']);
         }
 
         $user = User::where('email', $validated['email'])->first();
         if (!$user) {
-            return back()->withErrors(['email' => 'Contul nu a fost gasit.']);
+            return back()->withErrors(['email' => 'Nu am gasit un cont pentru aceasta adresa de email.']);
         }
 
         $user->update([
@@ -215,7 +224,7 @@ class AuthController extends Controller
 
         AuditLogger::log('auth.password_reset', $user, 'user', $user->id);
 
-        return redirect()->route('login')->with('success', 'Parola a fost resetata. Sesiunea a fost inchisa, autentifica-te din nou.');
+        return redirect()->route('login')->with('success', 'Parola a fost actualizata. Pentru siguranta, autentifica-te din nou.');
     }
 
 
@@ -259,10 +268,10 @@ class AuthController extends Controller
     private function roleEmailErrorMessage(string $role): string
     {
         if ($role === 'profesor') {
-            return 'Emailul nu este autorizat pentru cont de profesor.';
+            return 'Aceasta adresa de email nu este eligibila pentru rolul de profesor.';
         }
 
-        return 'Emailul trebuie sa fie dintr-un domeniu valid pentru studenti.';
+        return 'Te rugam sa folosesti o adresa de email dintr-un domeniu valid pentru studenti.';
     }
 
     private function resolveThemeFromRequest(Request $request): ?string

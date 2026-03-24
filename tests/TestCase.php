@@ -4,9 +4,18 @@ namespace Tests;
 
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\Cache;
 
 abstract class TestCase extends BaseTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Avoid cross-test bleed from throttle/rate-limiter counters.
+        Cache::flush();
+    }
+
     public function createApplication()
     {
         putenv('APP_ENV=testing');

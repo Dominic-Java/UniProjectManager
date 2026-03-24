@@ -47,7 +47,7 @@ class ProjectsService
     public function createProject(array $data, ?int $userId): array
     {
         if (!$userId) {
-            return ['ok' => false, 'message' => 'Nu am putut identifica utilizatorul curent.'];
+            return ['ok' => false, 'message' => 'Sesiunea nu este valida. Te rugam sa te reconectezi si sa incerci din nou.'];
         }
 
         $payload = [

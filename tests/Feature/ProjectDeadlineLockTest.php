@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Classroom;
 use App\Models\Milestone;
 use App\Models\Project;
 use App\Models\Team;
@@ -80,6 +81,58 @@ class ProjectDeadlineLockTest extends TestCase
         $this->assertDatabaseMissing('projects', [
             'id' => $project->id,
         ]);
+    }
+
+    public function test_professor_can_create_project_using_24h_deadline_fields(): void
+    {
+        $professor = User::factory()->create(['role' => 'profesor']);
+
+        $classroom = Classroom::create([
+            'code' => Classroom::generateCode(),
+            'name' => 'Clasa Deadline',
+            'subject' => 'Baze de date',
+            'created_by' => $professor->id,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($professor)
+            ->post(route('projects.store'), [
+                'classroom_id' => $classroom->id,
+                'title' => 'Proiect 24h',
+                'description' => 'Descriere proiect',
+                'start_date' => Carbon::now()->toDateString(),
+                'deadline_date' => Carbon::now()->addDays(2)->toDateString(),
+                'deadline_time' => '23:15',
+            ])
+            ->assertRedirect(route('projects.index'));
+
+        $project = Project::query()->where('title', 'Proiect 24h')->first();
+        $this->assertNotNull($project);
+        $this->assertSame('23:15', $project->deadline_at?->format('H:i'));
+    }
+
+    public function test_project_creation_rejects_non_24h_deadline_time_format(): void
+    {
+        $professor = User::factory()->create(['role' => 'profesor']);
+
+        $classroom = Classroom::create([
+            'code' => Classroom::generateCode(),
+            'name' => 'Clasa Deadline Invalid',
+            'subject' => 'Retele',
+            'created_by' => $professor->id,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($professor)
+            ->post(route('projects.store'), [
+                'classroom_id' => $classroom->id,
+                'title' => 'Proiect invalid time',
+                'description' => 'Descriere proiect',
+                'start_date' => Carbon::now()->toDateString(),
+                'deadline_date' => Carbon::now()->addDay()->toDateString(),
+                'deadline_time' => '11:15 PM',
+            ])
+            ->assertSessionHasErrors('deadline_time');
     }
 
     public function test_cannot_send_team_invitation_when_project_is_closed_by_deadline(): void

@@ -8,7 +8,7 @@
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #f0d7c2;border-radius:12px;">
     <tr>
         <td style="padding:24px;">
-            <h1 style="margin:0 0 12px;font-size:24px;">A apărut un proiect nou</h1>
+            <h1 style="margin:0 0 12px;font-size:24px;">A fost adaugat un proiect nou</h1>
 
             <p style="margin:0 0 12px;line-height:1.5;">
                 <strong>{{ $project->title }}</strong>
@@ -19,11 +19,11 @@
             </p>
 
             <p style="margin:0 0 12px;line-height:1.5;">
-                Profesor: <strong>{{ $creator->name }}</strong>
+                Profesor coordonator: <strong>{{ $creator->name }}</strong>
             </p>
 
             <p style="margin:0 0 18px;line-height:1.5;color:#7c5e46;">
-                Intră în platformă ca să vezi detaliile, echipa și livrabilele.
+                Intra in platforma pentru detalii despre cerinte, echipe si calendarul livrabilelor.
             </p>
 
             <p style="margin:0;">

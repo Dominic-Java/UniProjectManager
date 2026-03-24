@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Mail\DeliverableSubmissionGradedMail;
 use App\Models\Deliverable;
 use App\Models\DeliverableSubmission;
 use App\Models\Milestone;
 use App\Models\Project;
+use App\Models\User;
 use App\Services\Security\AuditLogger;
 use App\Support\ClassroomAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -78,7 +82,7 @@ class DeliverablesController extends Controller
         if (!empty($validated['milestone_id'])) {
             $milestone = Milestone::find($validated['milestone_id']);
             if ($milestone && $milestone->project_id !== (int) $validated['project_id']) {
-                return back()->withErrors(['milestone_id' => 'Milestone-ul selectat nu apartine proiectului.']);
+                return back()->withErrors(['milestone_id' => 'Etapa selectata nu apartine proiectului ales.']);
             }
         }
 
@@ -95,15 +99,17 @@ class DeliverablesController extends Controller
 
         AuditLogger::log('deliverables.create', $request->user(), 'deliverable', $deliverable->id);
 
-        return redirect()->route('deliverables.show', $deliverable)->with('success', 'Livrabilul a fost creat.');
+        return redirect()->route('deliverables.show', $deliverable)->with('success', 'Livrabilul a fost creat cu succes.');
     }
 
     public function show(Deliverable $deliverable): View
     {
-        $deliverable->load(['project.classroom', 'milestone', 'createdBy', 'submissions.student']);
+        $deliverable->load(['project.classroom', 'milestone', 'createdBy', 'submissions.student', 'submissions.gradedBy']);
         abort_unless($deliverable->project && ClassroomAccess::canAccessProject(auth()->user(), $deliverable->project), 403);
 
         $mySubmission = null;
+        $canGradeSubmissions = $deliverable->project
+            && ClassroomAccess::canManageProject(auth()->user(), $deliverable->project);
 
         if (auth()->user()?->hasRole('student')) {
             $mySubmission = $deliverable->submissions
@@ -114,6 +120,7 @@ class DeliverablesController extends Controller
             'title' => 'Detalii livrabil',
             'deliverable' => $deliverable,
             'my_submission' => $mySubmission,
+            'can_grade_submissions' => $canGradeSubmissions,
         ]);
     }
 
@@ -124,12 +131,12 @@ class DeliverablesController extends Controller
         $deliverable->loadMissing('project');
 
         if (!$deliverable->project) {
-            return back()->with('error', 'Livrabilul nu are proiect asociat.');
+            return back()->with('error', 'Livrabilul nu are un proiect asociat valid.');
         }
         abort_unless(ClassroomAccess::canAccessProject($request->user(), $deliverable->project), 403);
 
         if ($deliverable->project->isLocked()) {
-            return back()->with('error', 'Proiectul este inchis dupa deadline. Nu mai poti incarca livrabilul.');
+            return back()->with('error', 'Proiectul este inchis dupa termen. Nu mai poti incarca acest livrabil.');
         }
 
         if ($deliverable->submission_type === 'link') {
@@ -137,7 +144,12 @@ class DeliverablesController extends Controller
         }
 
         $validated = $request->validate([
-            'submission_file' => ['required', 'file', 'max:51200'],
+            'submission_file' => [
+                'required',
+                'file',
+                'mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,txt,csv,zip,rar,7z,png,jpg,jpeg,gif,webp,bmp',
+                'max:51200',
+            ],
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
@@ -161,20 +173,30 @@ class DeliverablesController extends Controller
             Storage::disk('local')->delete($existing->file_path);
         }
 
+        $submissionUpdates = [
+            'project_id' => $deliverable->project_id,
+            'file_path' => $storedPath,
+            'original_name' => $originalName,
+            'mime_type' => $file->getClientMimeType(),
+            'file_size_bytes' => $file->getSize() ?? 0,
+            'notes' => $validated['notes'] ?? null,
+            'submitted_at' => now(),
+        ];
+
+        if (Schema::hasColumn('deliverable_submissions', 'grade_points')) {
+            // O noua incarcare invalideaza evaluarea anterioara.
+            $submissionUpdates['grade_points'] = null;
+            $submissionUpdates['grade_feedback'] = null;
+            $submissionUpdates['graded_by_user_id'] = null;
+            $submissionUpdates['graded_at'] = null;
+        }
+
         $submission = DeliverableSubmission::updateOrCreate(
             [
                 'deliverable_id' => $deliverable->id,
                 'student_user_id' => $request->user()->id,
             ],
-            [
-                'project_id' => $deliverable->project_id,
-                'file_path' => $storedPath,
-                'original_name' => $originalName,
-                'mime_type' => $file->getClientMimeType(),
-                'file_size_bytes' => $file->getSize() ?? 0,
-                'notes' => $validated['notes'] ?? null,
-                'submitted_at' => now(),
-            ]
+            $submissionUpdates
         );
 
         AuditLogger::log('deliverables.submission.upload', $request->user(), 'deliverable_submission', $submission->id, [
@@ -190,7 +212,7 @@ class DeliverablesController extends Controller
         $user = $request->user();
         $submission->loadMissing('project.classroom');
         $canDownload = $submission->student_user_id === $user?->id;
-        if ($user?->hasRole('profesor') && $submission->project) {
+        if (($user?->hasRole('profesor') || $user?->isAdmin()) && $submission->project) {
             $canDownload = ClassroomAccess::canManageProject($user, $submission->project);
         }
         if (!$canDownload) {
@@ -198,7 +220,7 @@ class DeliverablesController extends Controller
         }
 
         if (!Storage::disk('local')->exists($submission->file_path)) {
-            return back()->with('error', 'Fisierul nu mai exista in storage.');
+            return back()->with('error', 'Fisierul cautat nu mai este disponibil in sistem.');
         }
 
         AuditLogger::log('deliverables.submission.download', $user, 'deliverable_submission', $submission->id, [
@@ -222,7 +244,7 @@ class DeliverablesController extends Controller
             abort(403);
         }
         if ($submission->project?->isLocked()) {
-            return back()->with('error', 'Proiectul este inchis dupa deadline. Nu mai poti anula predarea.');
+            return back()->with('error', 'Proiectul este inchis dupa termen. Nu mai poti retrage predarea.');
         }
 
         if (Storage::disk('local')->exists($submission->file_path)) {
@@ -237,7 +259,61 @@ class DeliverablesController extends Controller
             'deliverable_id' => $deliverableId,
         ]);
 
-        return back()->with('success', 'Predarea a fost anulata. Poti incarca din nou cand esti pregatit.');
+        return back()->with('success', 'Predarea a fost retrasa. Poti incarca o noua varianta cand esti pregatit.');
+    }
+
+    public function gradeSubmission(Request $request, DeliverableSubmission $submission): RedirectResponse
+    {
+        $user = $request->user();
+        if (!$user || (!$user->hasRole('profesor') && !$user->isAdmin())) {
+            abort(403);
+        }
+
+        if (!Schema::hasColumn('deliverable_submissions', 'grade_points')) {
+            return back()->withErrors([
+                'grade_points' => 'Functia de notare nu este disponibila in baza de date curenta. Ruleaza migrarile.',
+            ]);
+        }
+
+        $submission->loadMissing(['project.classroom', 'deliverable', 'student']);
+
+        if (!$submission->project || !ClassroomAccess::canManageProject($user, $submission->project)) {
+            abort(403);
+        }
+
+        $maxPoints = (float) ($submission->deliverable?->max_points ?? 0);
+        $validated = $request->validate([
+            'grade_points' => ['required', 'numeric', 'min:0', 'max:' . $maxPoints],
+            'grade_feedback' => ['nullable', 'string', 'max:3000'],
+        ]);
+
+        $wasGradedBefore = $submission->graded_at !== null || $submission->grade_points !== null;
+
+        $submission->update([
+            'grade_points' => round((float) $validated['grade_points'], 2),
+            'grade_feedback' => $validated['grade_feedback'] ?? null,
+            'graded_by_user_id' => $user->id,
+            'graded_at' => now(),
+        ]);
+        $submission->refresh();
+        $submission->loadMissing(['deliverable', 'project', 'student', 'gradedBy']);
+
+        AuditLogger::log('deliverables.submission.grade', $user, 'deliverable_submission', $submission->id, [
+            'deliverable_id' => $submission->deliverable_id,
+            'project_id' => $submission->project_id,
+            'student_user_id' => $submission->student_user_id,
+            'grade_points' => $submission->grade_points,
+            'was_update' => $wasGradedBefore,
+        ]);
+
+        $this->sendGradedSubmissionMail($submission, $user, $wasGradedBefore);
+
+        return back()->with(
+            'success',
+            $wasGradedBefore
+                ? 'Nota a fost actualizata, iar studentul a fost notificat pe email.'
+                : 'Nota a fost salvata, iar studentul a fost notificat pe email.'
+        );
     }
 
     public function edit(Deliverable $deliverable): View|RedirectResponse
@@ -302,7 +378,7 @@ class DeliverablesController extends Controller
         if (!empty($validated['milestone_id'])) {
             $milestone = Milestone::find($validated['milestone_id']);
             if ($milestone && $milestone->project_id !== (int) $validated['project_id']) {
-                return back()->withErrors(['milestone_id' => 'Milestone-ul selectat nu apartine proiectului.']);
+                return back()->withErrors(['milestone_id' => 'Etapa selectata nu apartine proiectului ales.']);
             }
         }
 
@@ -318,7 +394,7 @@ class DeliverablesController extends Controller
 
         AuditLogger::log('deliverables.update', $request->user(), 'deliverable', $deliverable->id);
 
-        return redirect()->route('deliverables.show', $deliverable)->with('success', 'Livrabilul a fost actualizat.');
+        return redirect()->route('deliverables.show', $deliverable)->with('success', 'Modificarile livrabilului au fost salvate.');
     }
 
     public function destroy(Deliverable $deliverable): RedirectResponse
@@ -335,11 +411,37 @@ class DeliverablesController extends Controller
         $deliverable->delete();
         AuditLogger::log('deliverables.delete', request()->user(), 'deliverable', $deliverableId);
 
-        return redirect()->route('deliverables.index')->with('success', 'Livrabilul a fost sters.');
+        return redirect()->route('deliverables.index')->with('success', 'Livrabilul a fost eliminat.');
     }
 
     private function projectLockedMessage(): string
     {
-        return 'Proiectul este inchis dupa deadline. Livrabilele nu mai pot fi modificate.';
+        return 'Proiectul este inchis dupa termen. Livrabilele nu mai pot fi modificate.';
+    }
+
+    private function sendGradedSubmissionMail(DeliverableSubmission $submission, User $gradedBy, bool $isUpdate): void
+    {
+        if (!$submission->student?->email) {
+            return;
+        }
+
+        try {
+            Mail::to($submission->student->email)->send(
+                new DeliverableSubmissionGradedMail($submission, $gradedBy, $isUpdate)
+            );
+
+            AuditLogger::log('deliverables.submission.grade_mail.sent', $gradedBy, 'deliverable_submission', $submission->id, [
+                'student_user_id' => $submission->student_user_id,
+                'is_update' => $isUpdate,
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            AuditLogger::log('deliverables.submission.grade_mail.failed', $gradedBy, 'deliverable_submission', $submission->id, [
+                'student_user_id' => $submission->student_user_id,
+                'is_update' => $isUpdate,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 }

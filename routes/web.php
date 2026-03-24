@@ -23,13 +23,13 @@ Route::get('/', [HomeController::class, 'landing'])->name('landing');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1')->name('login.submit');
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login')->name('login.submit');
     Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('password.request');
-    Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->middleware('throttle:5,1')->name('password.email');
+    Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->middleware('throttle:password-reset-request')->name('password.email');
 });
 
 Route::get('/reset-password', [AuthController::class, 'showResetPassword'])->name('password.reset');
-Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1')->name('password.update');
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:password-reset-submit')->name('password.update');
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
@@ -39,7 +39,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::post('/profile/password-reset-link', [ProfileController::class, 'sendPasswordResetLink'])->name('profile.password-reset-link');
+    Route::post('/profile/password-reset-link', [ProfileController::class, 'sendPasswordResetLink'])
+        ->middleware('throttle:5,1')
+        ->name('profile.password-reset-link');
     Route::post('/profile/theme-toggle', [ProfileController::class, 'toggleTheme'])->name('profile.theme.toggle');
 
     Route::get('/classrooms', [ClassroomsController::class, 'index'])->name('classrooms.index');
@@ -50,11 +52,17 @@ Route::middleware('auth')->group(function () {
         ->middleware('role:profesor')
         ->name('classrooms.store');
     Route::post('/classrooms/join', [ClassroomsController::class, 'joinByCode'])
-        ->middleware('role:student')
+        ->middleware(['role:student', 'throttle:15,1'])
         ->name('classrooms.join');
     Route::get('/classrooms/{classroom}', [ClassroomsController::class, 'show'])->name('classrooms.show');
-    Route::post('/classrooms/{classroom}/invitations', [ClassroomsController::class, 'sendInvitation'])
+    Route::put('/classrooms/{classroom}/archive', [ClassroomsController::class, 'archive'])
         ->middleware('role:profesor')
+        ->name('classrooms.archive');
+    Route::delete('/classrooms/{classroom}', [ClassroomsController::class, 'destroy'])
+        ->middleware('role:profesor')
+        ->name('classrooms.destroy');
+    Route::post('/classrooms/{classroom}/invitations', [ClassroomsController::class, 'sendInvitation'])
+        ->middleware(['role:profesor', 'throttle:10,1'])
         ->name('classrooms.invitations.send');
     Route::post('/classroom-invitations/{invitation}/respond', [ClassroomsController::class, 'respondInvitation'])
         ->middleware('role:student')
@@ -123,6 +131,9 @@ Route::middleware('auth')->group(function () {
         ->name('deliverables.submit');
     Route::get('/deliverable-submissions/{submission}/download', [DeliverablesController::class, 'downloadSubmission'])
         ->name('deliverables.submissions.download');
+    Route::post('/deliverable-submissions/{submission}/grade', [DeliverablesController::class, 'gradeSubmission'])
+        ->middleware('throttle:20,1')
+        ->name('deliverables.submissions.grade');
     Route::delete('/deliverable-submissions/{submission}', [DeliverablesController::class, 'cancelSubmission'])
         ->name('deliverables.submissions.cancel');
     Route::get('/deliverables/{deliverable}/edit', [DeliverablesController::class, 'edit'])
@@ -156,10 +167,10 @@ Route::middleware('auth')->group(function () {
         ->middleware('role:profesor')
         ->name('settings.index');
     Route::post('/settings/users', [SettingsController::class, 'store'])
-        ->middleware('role:profesor')
+        ->middleware(['role:profesor', 'throttle:10,1'])
         ->name('settings.users.store');
     Route::post('/settings/users/{user}/password-reset-link', [SettingsController::class, 'sendPasswordResetLink'])
-        ->middleware('role:profesor')
+        ->middleware(['role:profesor', 'throttle:10,1'])
         ->name('settings.users.password-reset-link');
     Route::put('/settings/users/{user}', [SettingsController::class, 'updateUserRole'])
         ->middleware('role:profesor')

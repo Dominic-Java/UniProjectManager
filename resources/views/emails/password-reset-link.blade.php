@@ -11,7 +11,7 @@
             <h1 style="margin:0 0 12px;font-size:24px;">Salut, {{ $user->first_name ?? $user->name }}!</h1>
             <p style="margin:0 0 14px;line-height:1.5;">
                 Ai cerut resetarea parolei pentru contul tau UniProjectManager.
-                Apasa butonul de mai jos ca sa setezi o parola noua.
+                Apasa butonul de mai jos pentru a seta o parola noua.
             </p>
 
             <p style="margin:20px 0;">

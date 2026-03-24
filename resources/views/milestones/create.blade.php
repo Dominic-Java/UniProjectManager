@@ -2,9 +2,9 @@
 
 @section('content')
     <section class="hero">
-        <div class="pill">Milestone nou</div>
-        <h1>Creeaza milestone</h1>
-        <p>Defineste o etapa intermediara.</p>
+        <div class="pill">Etapa noua</div>
+        <h1>Adauga o etapa</h1>
+        <p>Stabileste un reper intermediar pentru monitorizarea progresului.</p>
     </section>
 
     <section class="grid">
@@ -17,7 +17,7 @@
             @endif
 
             @if ($projects->count() === 0)
-                <div class="notice">Nu exista proiecte deschise pentru care poti crea milestones.</div>
+                <div class="notice">Nu exista proiecte deschise pentru care poti adauga etape.</div>
             @else
                 <form method="POST" action="{{ route('milestones.store') }}">
                     @csrf
@@ -25,7 +25,7 @@
                     <div style="margin-bottom:12px;">
                         <label class="label" for="project_id">Proiect</label>
                         <select class="input" id="project_id" name="project_id" required>
-                            <option value="">-- alege proiect --</option>
+                            <option value="">-- selecteaza proiectul --</option>
                             @foreach($projects as $project)
                                 <option value="{{ $project->id }}" @selected(old('project_id') == $project->id)>{{ $project->title }}</option>
                             @endforeach
@@ -44,7 +44,7 @@
 
                     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px;">
                         <div>
-                            <label class="label" for="due_at">Deadline</label>
+                            <label class="label" for="due_at">Termen limita</label>
                             <input class="input" id="due_at" type="datetime-local" name="due_at" value="{{ old('due_at') }}">
                         </div>
                         <div>
@@ -54,8 +54,8 @@
                     </div>
 
                     <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                        <button type="submit" class="btn btn-primary">Salveaza</button>
-                        <a href="{{ route('milestones.index') }}" class="btn btn-secondary">Inapoi</a>
+                        <button type="submit" class="btn btn-primary">Creeaza etapa</button>
+                        <a href="{{ route('milestones.index') }}" class="btn btn-secondary">Inapoi la etape</a>
                     </div>
                 </form>
             @endif

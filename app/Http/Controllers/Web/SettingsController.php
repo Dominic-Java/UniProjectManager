@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Auth\PasswordResetService;
+use App\Services\Auth\WelcomeMailService;
 use App\Services\Security\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 
 class SettingsController extends Controller
 {
@@ -23,7 +25,7 @@ class SettingsController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, WelcomeMailService $welcomeMailService): RedirectResponse
     {
         abort_unless($request->user()?->isAdmin(), 403);
 
@@ -31,7 +33,7 @@ class SettingsController extends Controller
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', 'min:8'],
+            'password' => ['required', 'confirmed', Password::min(10)->letters()->mixedCase()->numbers()->symbols()],
             'role' => ['required', 'in:profesor,student'],
         ]);
 
@@ -47,11 +49,13 @@ class SettingsController extends Controller
             'is_active' => true,
         ]);
 
+        $welcomeMailService->sendWelcomeMail($user, $request->user());
+
         AuditLogger::log('users.create', $request->user(), 'user', $user->id, [
             'role' => $user->role,
         ]);
 
-        return back()->with('success', 'Contul a fost creat.');
+        return back()->with('success', 'Contul a fost creat, iar linkul de setare a parolei a fost trimis pe email.');
     }
 
     public function updateUserRole(Request $request, User $user): RedirectResponse
@@ -63,15 +67,26 @@ class SettingsController extends Controller
         ]);
 
         if ($user->id === $request->user()->id && $validated['role'] !== 'profesor') {
-            return back()->withErrors(['role' => 'Nu poti elimina rolul de profesor pentru contul tau.']);
+            return back()->withErrors(['role' => 'Nu poti elimina rolul de profesor pentru propriul cont de administrator.']);
         }
 
-        $user->update(['role' => $validated['role']]);
+        $oldRole = $user->role;
+        $updates = ['role' => $validated['role']];
+        $expectedPrefix = $validated['role'] === 'profesor' ? 'PROF-' : 'STU-';
+        $hasMatchingPrefix = is_string($user->member_code) && str_starts_with($user->member_code, $expectedPrefix);
+
+        if ($oldRole !== $validated['role'] || !$hasMatchingPrefix) {
+            $updates['member_code'] = User::generateMemberCode($validated['role']);
+        }
+
+        $user->update($updates);
         AuditLogger::log('users.role.update', $request->user(), 'user', $user->id, [
+            'old_role' => $oldRole,
             'role' => $validated['role'],
+            'member_code' => $user->member_code,
         ]);
 
-        return back()->with('success', 'Rolul a fost actualizat.');
+        return back()->with('success', 'Rolul a fost actualizat. Daca a fost necesar, ID-ul de utilizator a fost regenerat.');
     }
 
     public function sendPasswordResetLink(Request $request, User $user, PasswordResetService $passwordResetService): RedirectResponse
@@ -79,7 +94,7 @@ class SettingsController extends Controller
         abort_unless($request->user()?->isAdmin(), 403);
 
         if (!$user->is_active) {
-            return back()->withErrors(['user' => 'Utilizatorul este dezactivat. Activeaza contul inainte de resetare.']);
+            return back()->withErrors(['user' => 'Contul este dezactivat. Reactiveaza contul inainte de a trimite resetarea parolei.']);
         }
 
         try {
@@ -87,7 +102,7 @@ class SettingsController extends Controller
         } catch (\Throwable $exception) {
             report($exception);
 
-            return back()->withErrors(['user' => 'Nu am putut trimite emailul de resetare. Verifica setarile SMTP.']);
+            return back()->withErrors(['user' => 'Nu am putut trimite emailul de resetare. Verifica setarile SMTP si incearca din nou.']);
         }
 
         return back()->with('success', 'Linkul de resetare a fost trimis catre ' . $user->email . '.');
@@ -98,13 +113,16 @@ class SettingsController extends Controller
         abort_unless($request->user()?->isAdmin(), 403);
 
         if ($user->id === $request->user()->id) {
-            return back()->withErrors(['user' => 'Nu poti sterge propriul cont.']);
+            return back()->withErrors(['user' => 'Nu iti poti sterge propriul cont de administrator.']);
+        }
+        if ($user->isAdmin()) {
+            return back()->withErrors(['user' => 'Conturile de administrator nu pot fi sterse din aceasta sectiune.']);
         }
 
         $blocks = $this->getDeletionBlocks($user->id);
         if (!empty($blocks)) {
             return back()->withErrors([
-                'user' => 'Utilizatorul nu poate fi sters deoarece are: ' . implode(', ', $blocks) . '.',
+                'user' => 'Utilizatorul nu poate fi eliminat deoarece are inregistrari active: ' . implode(', ', $blocks) . '.',
             ]);
         }
 
@@ -119,7 +137,7 @@ class SettingsController extends Controller
             'role' => $deletedRole,
         ]);
 
-        return back()->with('success', 'Utilizatorul a fost sters.');
+        return back()->with('success', 'Utilizatorul a fost eliminat.');
     }
 
     private function getDeletionBlocks(int $userId): array

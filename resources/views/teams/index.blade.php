@@ -3,8 +3,8 @@
 @section('content')
     <section class="hero">
         <div class="pill">Echipe</div>
-        <h1>Lista echipelor</h1>
-        <p>Gestioneaza echipele si invitatiile asociate.</p>
+        <h1>Gestionarea echipelor</h1>
+        <p>Urmareste echipele active, invitatiile de colaborare si progresul pe proiecte.</p>
     </section>
 
     <section class="grid">
@@ -20,14 +20,14 @@
             @endif
 
             @if ($teams->count() === 0)
-                <div class="notice">Nu exista echipe inregistrate inca.</div>
+                <div class="notice">In acest moment nu exista echipe active.</div>
             @else
                 <table class="table">
                     <thead>
                     <tr>
                         <th>Echipa</th>
                         <th>Proiect</th>
-                        <th>Status</th>
+                        <th>Statut</th>
                         <th>Membri</th>
                         <th>Actiuni</th>
                     </tr>
@@ -42,13 +42,13 @@
                             <td>{{ $team->members_count }}</td>
                             <td>
                                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                                    <a class="btn btn-secondary" href="{{ route('teams.show', $team) }}">Detalii</a>
+                                    <a class="btn btn-secondary" href="{{ route('teams.show', $team) }}">Vezi detalii</a>
                                     @if((auth()->user()?->hasRole('profesor') || $team->created_by === auth()->id()) && !$teamLocked)
-                                        <a class="btn btn-secondary" href="{{ route('teams.edit', $team) }}">Editeaza</a>
+                                        <a class="btn btn-secondary" href="{{ route('teams.edit', $team) }}">Modifica</a>
                                         <form method="POST" action="{{ route('teams.destroy', $team) }}">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-danger" onclick="return confirm('Stergi echipa?')">Sterge</button>
+                                            <button type="submit" class="btn btn-danger" onclick="return confirm('Sigur vrei sa elimini aceasta echipa?')">Elimina</button>
                                         </form>
                                     @elseif($teamLocked)
                                         <span class="muted">Proiect inchis</span>
@@ -63,19 +63,19 @@
         </div>
 
         <div class="card span-4">
-            <h3>Actiuni</h3>
-            <p class="muted">Creeaza echipe si gestioneaza membrii.</p>
+            <h3>Actiuni rapide</h3>
+            <p class="muted">Creeaza echipe noi si coordoneaza componenta acestora.</p>
             @if($can_create_team)
-                <a class="btn btn-primary" href="{{ route('teams.create') }}">Creeaza echipa</a>
+                <a class="btn btn-primary" href="{{ route('teams.create') }}">Creeaza echipa noua</a>
             @else
-                <div class="notice">Nu exista proiecte deschise pentru echipe noi.</div>
+                <div class="notice">Nu exista proiecte deschise pentru crearea unei echipe in acest moment.</div>
             @endif
         </div>
 
         <div class="card span-12">
             <h3>Invitatii primite</h3>
             @if ($invitations->count() === 0)
-                <div class="notice">Nu ai invitatii in asteptare.</div>
+                <div class="notice">Nu ai invitatii de echipa in asteptare.</div>
             @else
                 <table class="table">
                     <thead>
@@ -95,7 +95,7 @@
                             <td>{{ $inv->invitedBy?->name ?? '-' }}</td>
                             <td>
                                 @if($projectLocked)
-                                    <span class="muted">Proiect inchis dupa deadline</span>
+                                    <span class="muted">Proiect inchis dupa termen</span>
                                 @else
                                     <form method="POST" action="{{ route('teams.invitations.respond', $inv) }}" style="display:inline;">
                                         @csrf
@@ -105,7 +105,7 @@
                                     <form method="POST" action="{{ route('teams.invitations.respond', $inv) }}" style="display:inline;">
                                         @csrf
                                         <input type="hidden" name="action" value="reject">
-                                        <button type="submit" class="btn btn-secondary">Respinge</button>
+                                        <button type="submit" class="btn btn-secondary">Refuza</button>
                                     </form>
                                 @endif
                             </td>
@@ -114,6 +114,24 @@
                     </tbody>
                 </table>
             @endif
+        </div>
+
+        <div class="card span-12">
+            <h3>Colaborare eficienta in echipa</h3>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+                <div class="card" style="padding:14px;">
+                    <strong>Roluri clare</strong>
+                    <p class="muted" style="margin:8px 0 0;">Stabileste din timp cine coordoneaza si cine executa.</p>
+                </div>
+                <div class="card" style="padding:14px;">
+                    <strong>Comunicare activa</strong>
+                    <p class="muted" style="margin:8px 0 0;">Foloseste invitatiile si statusurile pentru coordonare.</p>
+                </div>
+                <div class="card" style="padding:14px;">
+                    <strong>Respectarea termenelor</strong>
+                    <p class="muted" style="margin:8px 0 0;">Sincronizeaza activitatea echipei cu livrabilele proiectului.</p>
+                </div>
+            </div>
         </div>
     </section>
 @endsection

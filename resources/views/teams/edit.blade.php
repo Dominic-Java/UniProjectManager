@@ -3,8 +3,8 @@
 @section('content')
     <section class="hero">
         <div class="pill">Echipa</div>
-        <h1>Editeaza echipa</h1>
-        <p>Actualizeaza numele si statusul.</p>
+        <h1>Actualizeaza datele echipei</h1>
+        <p>Poti modifica numele echipei si statutul curent.</p>
     </section>
 
     <section class="grid">
@@ -28,15 +28,15 @@
                 <div style="margin-bottom:12px;">
                     <label class="label" for="status">Status</label>
                     <select class="input" id="status" name="status">
-                        <option value="active" @selected(old('status', $team->status) === 'active')>Active</option>
-                        <option value="locked" @selected(old('status', $team->status) === 'locked')>Locked</option>
-                        <option value="archived" @selected(old('status', $team->status) === 'archived')>Archived</option>
+                        <option value="active" @selected(old('status', $team->status) === 'active')>Activa</option>
+                        <option value="locked" @selected(old('status', $team->status) === 'locked')>Blocata</option>
+                        <option value="archived" @selected(old('status', $team->status) === 'archived')>Arhivata</option>
                     </select>
                 </div>
 
                 <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                    <button type="submit" class="btn btn-primary">Salveaza</button>
-                    <a href="{{ route('teams.show', $team) }}" class="btn btn-secondary">Inapoi</a>
+                    <button type="submit" class="btn btn-primary">Salveaza modificarile</button>
+                    <a href="{{ route('teams.show', $team) }}" class="btn btn-secondary">Inapoi la detalii</a>
                 </div>
             </form>
         </div>

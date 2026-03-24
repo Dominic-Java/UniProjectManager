@@ -3,8 +3,8 @@
 @section('content')
     <section class="hero">
         <div class="pill">Profil</div>
-        <h1>Date personale</h1>
-        <p>Actualizeaza informatiile de baza ale contului tau.</p>
+        <h1>Profilul tau</h1>
+        <p>Actualizeaza datele personale pentru o experienta completa in platforma.</p>
     </section>
 
     <section class="grid">
@@ -15,7 +15,7 @@
 
             @if ($errors->any())
                 <div class="notice error" style="margin-bottom:12px;">
-                    Verifica datele introduse si incearca din nou.
+                    Nu am putut salva modificarile. Te rugam sa verifici datele introduse.
                 </div>
             @endif
 
@@ -53,10 +53,10 @@
                     <div>
                         <label class="label" for="gender">Sex</label>
                         <select class="input" id="gender" name="gender">
-                            <option value="">-- selecteaza --</option>
+                            <option value="">-- selecteaza o optiune --</option>
                             <option value="male" @selected(old('gender', $user->gender) === 'male')>Masculin</option>
                             <option value="female" @selected(old('gender', $user->gender) === 'female')>Feminin</option>
-                            <option value="other" @selected(old('gender', $user->gender) === 'other')>Altul</option>
+                            <option value="other" @selected(old('gender', $user->gender) === 'other')>Prefer sa nu precizez</option>
                         </select>
                     </div>
                     <div>
@@ -68,8 +68,8 @@
                 <div style="margin-bottom:12px;">
                     <label class="label" for="theme_preference">Tema interfata</label>
                     <select class="input" id="theme_preference" name="theme_preference">
-                        <option value="light" @selected(old('theme_preference', $user->theme_preference ?? 'light') === 'light')>Light</option>
-                        <option value="dark" @selected(old('theme_preference', $user->theme_preference ?? 'light') === 'dark')>Dark</option>
+                        <option value="light" @selected(old('theme_preference', $user->theme_preference ?? 'light') === 'light')>Mod luminos</option>
+                        <option value="dark" @selected(old('theme_preference', $user->theme_preference ?? 'light') === 'dark')>Mod intunecat</option>
                     </select>
                 </div>
 
@@ -129,13 +129,13 @@
                     <option value="Vrancea"></option>
                 </datalist>
 
-                <button type="submit" class="btn btn-primary">Salveaza profil</button>
+                <button type="submit" class="btn btn-primary">Salveaza modificarile</button>
             </form>
         </div>
 
         <div class="card span-4">
             <h3>Cont</h3>
-            <p class="muted">Emailul este legat de autentificare.</p>
+            <p class="muted">Aceste date definesc identificarea contului tau in platforma.</p>
             <div class="notice">{{ $user->email }}</div>
             <p class="muted" style="margin-top:10px;">ID utilizator</p>
             <div class="notice">{{ $user->member_code ?? '-' }}</div>
@@ -143,7 +143,7 @@
             <div class="pill" style="margin-top:6px;">{{ ucfirst($user->role) }}</div>
             <form method="POST" action="{{ route('profile.password-reset-link') }}" style="margin-top:12px;">
                 @csrf
-                <button type="submit" class="btn btn-secondary">Resetare parola</button>
+                <button type="submit" class="btn btn-secondary">Trimite link pentru resetarea parolei</button>
             </form>
         </div>
     </section>

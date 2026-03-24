@@ -3,8 +3,8 @@
 @section('content')
     <section class="hero">
         <div class="pill">Echipa noua</div>
-        <h1>Creeaza echipa</h1>
-        <p>Alege proiectul si numele echipei.</p>
+        <h1>Creeaza o echipa</h1>
+        <p>Alege proiectul si completeaza datele de baza pentru noua echipa.</p>
     </section>
 
     <section class="grid">
@@ -17,7 +17,7 @@
             @endif
 
             @if ($projects->count() === 0)
-                <div class="notice">Nu exista proiecte deschise pentru care poti crea echipa.</div>
+                <div class="notice">Momentan nu exista proiecte deschise pentru care poti crea o echipa.</div>
             @else
                 <form method="POST" action="{{ route('teams.store') }}">
                     @csrf
@@ -25,7 +25,7 @@
                 <div style="margin-bottom:12px;">
                     <label class="label" for="project_id">Proiect</label>
                     <select class="input" id="project_id" name="project_id" required>
-                        <option value="">-- alege proiect --</option>
+                        <option value="">-- alege proiectul --</option>
                         @foreach($projects as $project)
                             <option value="{{ $project->id }}" @selected(old('project_id') == $project->id)>
                                 {{ $project->title }}
@@ -46,39 +46,39 @@
                 <div style="margin-bottom:12px;">
                     <label class="label" for="status">Status</label>
                     <select class="input" id="status" name="status">
-                        <option value="active" @selected(old('status') === 'active')>Active</option>
-                        <option value="locked" @selected(old('status') === 'locked')>Locked</option>
-                        <option value="archived" @selected(old('status') === 'archived')>Archived</option>
+                        <option value="active" @selected(old('status') === 'active')>Activa</option>
+                        <option value="locked" @selected(old('status') === 'locked')>Blocata</option>
+                        <option value="archived" @selected(old('status') === 'archived')>Arhivata</option>
                     </select>
                 </div>
 
                 @if(auth()->user()?->hasRole('profesor'))
                     <div style="margin-bottom:12px;">
-                        <label class="label" for="captain_user_id">Capitan echipa (student)</label>
+                        <label class="label" for="captain_user_id">Lider echipa (student)</label>
                         <select class="input" id="captain_user_id" name="captain_user_id" required>
-                            <option value="">-- selecteaza student --</option>
+                            <option value="">-- alege studentul --</option>
                             @foreach($students as $student)
                                 <option value="{{ $student->id }}" @selected(old('captain_user_id') == $student->id)>
                                     {{ $student->name }} ({{ $student->email }})
                                 </option>
                             @endforeach
                         </select>
-                        <p class="muted" style="margin-top:6px;">Profesorul poate crea echipa, dar membrii raman doar studentii.</p>
+                        <p class="muted" style="margin-top:6px;">Pot fi alesi doar studenti inscrisi in classroom-ul proiectului.</p>
                     </div>
                 @endif
 
                     <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                        <button type="submit" class="btn btn-primary">Salveaza echipa</button>
-                        <a href="{{ route('teams.index') }}" class="btn btn-secondary">Inapoi</a>
+                        <button type="submit" class="btn btn-primary">Creeaza echipa</button>
+                        <a href="{{ route('teams.index') }}" class="btn btn-secondary">Inapoi la echipe</a>
                     </div>
                 </form>
             @endif
         </div>
 
         <div class="card span-4">
-            <h3>Info</h3>
-            <p class="muted">Membrii echipei pot fi doar studenti.</p>
-            <p class="muted">Capitanul (liderul) poate trimite invitatii si adauga membri.</p>
+            <h3>Informatii utile</h3>
+            <p class="muted">Coordonarea echipei este facuta de liderul desemnat.</p>
+            <p class="muted">Liderul poate trimite invitatii si poate actualiza componenta echipei.</p>
         </div>
     </section>
 @endsection

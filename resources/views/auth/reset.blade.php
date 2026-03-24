@@ -4,7 +4,7 @@
     <section class="hero">
         <div class="pill">Resetare parola</div>
         <h1>Seteaza parola noua</h1>
-        <p>Pagina dedicata pentru resetare. Dupa confirmare, sesiunea curenta se inchide automat.</p>
+        <p>Completeaza campurile de mai jos pentru a finaliza resetarea contului in conditii de siguranta.</p>
     </section>
 
     <section class="grid">
@@ -37,15 +37,15 @@
                 </div>
 
                 <div style="margin-top:16px;">
-                    <button type="submit" class="btn btn-primary">Confirma noua parola</button>
+                    <button type="submit" class="btn btn-primary">Actualizeaza parola</button>
                 </div>
             </form>
         </div>
 
         <div class="card span-6">
-            <h3>Atentie</h3>
-            <p class="muted">Linkul expira dupa 60 de minute. Daca ai probleme, cere un link nou.</p>
-            <a href="{{ route('password.request') }}" class="btn btn-secondary">Solicita alt link</a>
+            <h3>Ai nevoie de un link nou?</h3>
+            <p class="muted">Daca linkul a expirat, poti solicita imediat unul nou din pagina de recuperare.</p>
+            <a href="{{ route('password.request') }}" class="btn btn-secondary">Solicita un nou link</a>
         </div>
     </section>
 @endsection

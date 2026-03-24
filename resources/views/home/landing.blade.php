@@ -143,35 +143,34 @@
     <section class="landing-shell">
         <div class="landing-hero">
             <div class="pill">Bine ai venit in UniProjectManager</div>
-            <h1>Un loc simplu unde profesorii si studentii lucreaza impreuna, fara haos.</h1>
+            <h1>Platforma academica in care profesorii si studentii colaboreaza clar si eficient.</h1>
             <p>
-                Gasesti proiectele, etapele si livrabilele intr-un singur flux clar.
-                Fiecare echipa stie ce are de facut, iar profesorii vad progresul fara sa alerge dupa update-uri.
+                Proiectele, etapele si livrabilele sunt organizate intr-un flux usor de urmarit.
+                Echipele stiu ce au de facut, iar cadrele didactice monitorizeaza progresul in timp real.
             </p>
             <div class="landing-buttons">
-                <a class="btn btn-primary" href="{{ route('login') }}">Intra in platforma</a>
-                <a class="btn btn-secondary" href="{{ route('landing', ['v' => 2]) }}">Vezi varianta 2</a>
-                <span class="muted" style="align-self:center;">Conturile sunt create de administrator.</span>
+                <a class="btn btn-primary" href="{{ route('login') }}">Autentificare</a>
+                <span class="muted" style="align-self:center;">Accesul este oferit de administrator.</span>
             </div>
             <div class="landing-tags">
-                <span class="landing-tag">Proiecte organizate</span>
-                <span class="landing-tag">Echipe active</span>
-                <span class="landing-tag">Deadline-uri clare</span>
+                <span class="landing-tag">Organizare academica</span>
+                <span class="landing-tag">Colaborare in echipa</span>
+                <span class="landing-tag">Termene clare</span>
             </div>
         </div>
 
         <div class="landing-side">
             <div class="card">
-                <strong>Stil classroom, dar pe proiecte reale</strong>
-                <p class="muted">Mai putin timp pierdut pe mesaje disparate, mai mult focus pe ce conteaza.</p>
+                <strong>Structura de tip classroom, orientata pe proiecte</strong>
+                <p class="muted">Mai putine mesaje dispersate si mai mult timp pentru activitatea didactica.</p>
             </div>
             <div class="card">
-                <strong>Prietenos pentru studenti</strong>
-                <p class="muted">Interfata curata, actiuni rapide si informatii la vedere.</p>
+                <strong>Claritate pentru studenti</strong>
+                <p class="muted">Interfata simpla, cu informatii esentiale si pasi usor de urmat.</p>
             </div>
             <div class="card">
-                <strong>Control bun pentru profesori</strong>
-                <p class="muted">Roluri, audit log si reguli clare cand proiectele ajung la termen.</p>
+                <strong>Control academic pentru profesori</strong>
+                <p class="muted">Roluri bine definite, trasabilitate si reguli coerente la termenele de predare.</p>
             </div>
         </div>
     </section>
@@ -181,16 +180,16 @@
             <h3>Ce gasesti in platforma</h3>
             <div class="friendly-grid">
                 <div class="card">
-                    <strong>Clase de proiect</strong>
-                    <p class="muted">Fiecare proiect are context clar, membri si reguli de lucru.</p>
+                    <strong>Classroom-uri pe materii</strong>
+                    <p class="muted">Fiecare proiect are context clar, membri definiti si reguli de lucru transparente.</p>
                 </div>
                 <div class="card">
                     <strong>Echipe si colaborare</strong>
-                    <p class="muted">Invitatii, roluri si organizare usoara pentru echipele studentesti.</p>
+                    <p class="muted">Invitatii, roluri si organizare eficienta pentru echipele studentesti.</p>
                 </div>
                 <div class="card">
                     <strong>Milestones si livrabile</strong>
-                    <p class="muted">Deadline-uri vizibile, evaluare mai simpla si ritm de lucru stabil.</p>
+                    <p class="muted">Termene vizibile, evaluare mai clara si ritm de lucru constant.</p>
                 </div>
             </div>
         </div>
@@ -199,16 +198,16 @@
             <h3>Cum incepi, pe scurt</h3>
             <div class="friendly-step">
                 <div class="card">
-                    <strong>1. Profesorul pregateste proiectul</strong>
-                    <p class="muted">Seteaza structura, etapele si termenele.</p>
+                    <strong>1. Cadrul didactic configureaza proiectul</strong>
+                    <p class="muted">Stabileste structura, etapele si termenele de lucru.</p>
                 </div>
                 <div class="card">
-                    <strong>2. Studentii intra in echipe</strong>
-                    <p class="muted">Se organizeaza rapid si pornesc pe taskuri.</p>
+                    <strong>2. Studentii se organizeaza in echipe</strong>
+                    <p class="muted">Distribuie responsabilitati si pornesc activitatea in proiect.</p>
                 </div>
                 <div class="card">
-                    <strong>3. Toata lumea vede progresul</strong>
-                    <p class="muted">Mai putine neintelegeri, mai multa claritate.</p>
+                    <strong>3. Progresul este vizibil pentru toti</strong>
+                    <p class="muted">Comunicare mai clara si decizii luate la timp.</p>
                 </div>
             </div>
         </div>
@@ -217,7 +216,7 @@
             <div class="landing-cta">
                 <div>
                     <h3 style="margin:0 0 6px;">Vrei sa folosesti platforma pentru grupa ta?</h3>
-                    <p style="margin:0;color:#ffedd5;">Cere acces de la administrator si intra direct in lucru.</p>
+                    <p style="margin:0;color:#ffedd5;">Solicita acces administratorului si incepe organizarea proiectelor intr-un cadru unitar.</p>
                 </div>
                 <a class="btn btn-secondary" href="{{ route('login') }}">Autentificare</a>
             </div>

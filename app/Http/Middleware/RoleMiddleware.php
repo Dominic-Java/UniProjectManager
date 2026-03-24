@@ -13,7 +13,7 @@ class RoleMiddleware
         $user = $request->user();
 
         if (!$user || !$user->hasRole(...$roles)) {
-            abort(403, 'Nu ai permisiunea necesara pentru aceasta actiune.');
+            abort(403, 'Aceasta sectiune este disponibila doar pentru rolurile autorizate.');
         }
 
         return $next($request);

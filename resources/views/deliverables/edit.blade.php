@@ -3,8 +3,8 @@
 @section('content')
     <section class="hero">
         <div class="pill">Livrabil</div>
-        <h1>Editeaza livrabil</h1>
-        <p>Actualizeaza detaliile livrabilului.</p>
+        <h1>Actualizeaza livrabilul</h1>
+        <p>Revizuieste cerinta de predare pentru a ramane clara pentru studenti.</p>
     </section>
 
     <section class="grid">
@@ -30,9 +30,9 @@
                 </div>
 
                 <div style="margin-bottom:12px;">
-                    <label class="label" for="milestone_id">Milestone (optional)</label>
+                    <label class="label" for="milestone_id">Etapa asociata (optional)</label>
                     <select class="input" id="milestone_id" name="milestone_id">
-                        <option value="">-- fara milestone --</option>
+                        <option value="">-- fara etapa asociata --</option>
                         @foreach($milestones as $milestone)
                             <option value="{{ $milestone->id }}" @selected(old('milestone_id', $deliverable->milestone_id) == $milestone->id)>{{ $milestone->title }}</option>
                         @endforeach
@@ -51,7 +51,7 @@
 
                 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px;">
                     <div>
-                        <label class="label" for="due_at">Deadline</label>
+                        <label class="label" for="due_at">Termen limita</label>
                         <input class="input" id="due_at" type="datetime-local" name="due_at" value="{{ old('due_at', optional($deliverable->due_at)->format('Y-m-d\\TH:i')) }}">
                     </div>
                     <div>
@@ -65,13 +65,13 @@
                     <select class="input" id="submission_type" name="submission_type">
                         <option value="file" @selected(old('submission_type', $deliverable->submission_type) === 'file')>Fisier</option>
                         <option value="link" @selected(old('submission_type', $deliverable->submission_type) === 'link')>Link</option>
-                        <option value="both" @selected(old('submission_type', $deliverable->submission_type) === 'both')>Ambele</option>
+                        <option value="both" @selected(old('submission_type', $deliverable->submission_type) === 'both')>Fisier si link</option>
                     </select>
                 </div>
 
                 <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                    <button type="submit" class="btn btn-primary">Salveaza</button>
-                    <a href="{{ route('deliverables.show', $deliverable) }}" class="btn btn-secondary">Inapoi</a>
+                    <button type="submit" class="btn btn-primary">Salveaza modificarile</button>
+                    <a href="{{ route('deliverables.show', $deliverable) }}" class="btn btn-secondary">Inapoi la detalii</a>
                 </div>
             </form>
         </div>

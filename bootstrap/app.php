@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(['upm_theme']);
+        $trustedProxies = env('TRUSTED_PROXIES');
+        if (is_string($trustedProxies) && trim($trustedProxies) !== '') {
+            $middleware->trustProxies(at: $trustedProxies);
+        }
 
         $middleware->alias([
             'role' => RoleMiddleware::class,

@@ -3,15 +3,15 @@
 @section('content')
     <section class="hero">
         <div class="pill">Proiect</div>
-        <h1>Editeaza proiect</h1>
-        <p>Actualizeaza informatiile proiectului.</p>
+        <h1>Actualizeaza proiectul</h1>
+        <p>Revizuieste detaliile proiectului si salveaza modificarile necesare.</p>
     </section>
 
     <section class="grid">
         <div class="card span-8">
             @if ($errors->any())
                 <div class="notice error" style="margin-bottom:12px;">
-                    Verifica datele introduse si incearca din nou.
+                    Te rugam sa verifici datele introduse si sa incerci din nou.
                 </div>
             @endif
 
@@ -22,7 +22,7 @@
                 <div style="margin-bottom:12px;">
                     <label class="muted">Classroom</label>
                     <select name="classroom_id" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
-                        <option value="">-- fara classroom (legacy) --</option>
+                        <option value="">-- fara classroom asociat (legacy) --</option>
                         @foreach($classrooms as $classroom)
                             <option value="{{ $classroom->id }}" @selected((string) old('classroom_id', $project->classroom_id) === (string) $classroom->id)>
                                 {{ $classroom->name }} - {{ $classroom->subject }} ({{ $classroom->code }})
@@ -57,7 +57,7 @@
                     </div>
                 @endif
 
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;">
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;">
                     <div>
                         <label class="muted">Data inceput</label>
                         <input type="date" name="start_date" value="{{ old('start_date', optional($project->start_date)->format('Y-m-d')) }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
@@ -67,8 +67,31 @@
                         <input type="date" name="end_date" value="{{ old('end_date', optional($project->end_date)->format('Y-m-d')) }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
                     </div>
                     <div>
-                        <label class="muted">Deadline inchidere (data + ora)</label>
-                        <input type="datetime-local" name="deadline_at" value="{{ old('deadline_at', optional($project->deadline_at)->format('Y-m-d\\TH:i')) }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
+                        <label class="muted">Data deadline inchidere</label>
+                        <input type="date" name="deadline_date" value="{{ old('deadline_date', optional($project->deadline_at)->format('Y-m-d')) }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
+                    </div>
+                    <div>
+                        <label class="muted">Ora deadline</label>
+                        @php($selectedDeadlineTime = old('deadline_time', optional($project->deadline_at)->format('H:i')))
+                        <input
+                            type="text"
+                            name="deadline_time"
+                            value="{{ $selectedDeadlineTime }}"
+                            placeholder="Ex: 18:30"
+                            list="deadline-time-options-edit"
+                            inputmode="numeric"
+                            pattern="^([01][0-9]|2[0-3]):[0-5][0-9]$"
+                            style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);"
+                        >
+                        <datalist id="deadline-time-options-edit">
+                            @for($hour = 0; $hour < 24; $hour++)
+                                @for($minute = 0; $minute < 60; $minute++)
+                                    @php($timeValue = sprintf('%02d:%02d', $hour, $minute))
+                                    <option value="{{ $timeValue }}"></option>
+                                @endfor
+                            @endfor
+                        </datalist>
+                        <p class="muted" style="margin-top:8px;">Poti selecta ora din lista sau o poti introduce manual.</p>
                     </div>
                 </div>
 
@@ -104,15 +127,15 @@
                 </div>
 
                 <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
-                    <button type="submit" class="btn btn-primary">Salveaza modificari</button>
-                    <a href="{{ route('projects.show', $project) }}" class="btn btn-secondary">Inapoi</a>
+                    <button type="submit" class="btn btn-primary">Salveaza modificarile</button>
+                    <a href="{{ route('projects.show', $project) }}" class="btn btn-secondary">Revino la proiect</a>
                 </div>
             </form>
         </div>
 
         <div class="card span-4">
-            <h3>Info</h3>
-            <p class="muted">Modificarile sunt vizibile imediat in proiect.</p>
+            <h3>Informare</h3>
+            <p class="muted">Modificarile salvate devin vizibile imediat pentru utilizatorii care au acces la proiect.</p>
         </div>
     </section>
 @endsection

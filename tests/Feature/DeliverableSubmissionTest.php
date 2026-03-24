@@ -2,14 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Mail\DeliverableSubmissionGradedMail;
 use App\Models\Classroom;
 use App\Models\Deliverable;
+use App\Models\DeliverableSubmission;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -165,6 +168,195 @@ class DeliverableSubmissionTest extends TestCase
         ]);
 
         $this->assertDatabaseCount('deliverable_submissions', 1);
+    }
+
+    public function test_professor_can_grade_submission_and_student_receives_email(): void
+    {
+        Storage::fake('local');
+        Mail::fake();
+
+        $professor = User::factory()->create(['role' => 'profesor']);
+        $student = User::factory()->create(['role' => 'student']);
+        $classroom = $this->createClassroomWithMembers($professor, $student, 'Retele');
+
+        $project = Project::create([
+            'title' => 'Proiect notare',
+            'description' => 'Descriere',
+            'domain' => 'Retele',
+            'classroom_id' => $classroom->id,
+            'status' => 'open',
+            'visibility' => 'public',
+            'min_team_size' => 1,
+            'max_team_size' => 4,
+            'start_date' => Carbon::now()->subDay()->toDateString(),
+            'end_date' => Carbon::now()->addDays(7)->toDateString(),
+            'deadline_at' => Carbon::now()->addDays(2),
+            'created_by' => $professor->id,
+        ]);
+
+        $deliverable = Deliverable::create([
+            'project_id' => $project->id,
+            'title' => 'Predare notata',
+            'description' => null,
+            'due_at' => Carbon::now()->addDay(),
+            'submission_type' => 'file',
+            'max_points' => 100,
+            'created_by' => $professor->id,
+        ]);
+
+        $this->actingAs($student)->post(route('deliverables.submit', $deliverable), [
+            'submission_file' => UploadedFile::fake()->create('lucrare.zip', 100),
+        ]);
+
+        $submission = DeliverableSubmission::query()
+            ->where('deliverable_id', $deliverable->id)
+            ->where('student_user_id', $student->id)
+            ->first();
+
+        $this->assertNotNull($submission);
+
+        $this->actingAs($professor)
+            ->post(route('deliverables.submissions.grade', $submission), [
+                'grade_points' => 95.5,
+                'grade_feedback' => 'Foarte bine structurat, mai lucreaza la documentatie.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $submission->refresh();
+        $this->assertSame('95.50', $submission->grade_points);
+        $this->assertSame($professor->id, $submission->graded_by_user_id);
+        $this->assertNotNull($submission->graded_at);
+        $this->assertSame('Foarte bine structurat, mai lucreaza la documentatie.', $submission->grade_feedback);
+
+        Mail::assertSent(DeliverableSubmissionGradedMail::class, function (DeliverableSubmissionGradedMail $mail) use ($submission, $student): bool {
+            return $mail->hasTo($student->email)
+                && $mail->submission->id === $submission->id
+                && $mail->gradedBy->id === $submission->graded_by_user_id;
+        });
+    }
+
+    public function test_admin_can_grade_submission_created_in_another_professor_project(): void
+    {
+        Storage::fake('local');
+        Mail::fake();
+
+        config()->set('uniprojectmanager.admin_emails', ['admin@ulbs.ro']);
+
+        $admin = User::factory()->create([
+            'email' => 'admin@ulbs.ro',
+            'role' => 'student',
+        ]);
+        $ownerProfessor = User::factory()->create(['role' => 'profesor']);
+        $student = User::factory()->create(['role' => 'student']);
+        $classroom = $this->createClassroomWithMembers($ownerProfessor, $student, 'PAOO');
+
+        $project = Project::create([
+            'title' => 'Proiect acces admin',
+            'description' => 'Descriere',
+            'domain' => 'PAOO',
+            'classroom_id' => $classroom->id,
+            'status' => 'open',
+            'visibility' => 'public',
+            'min_team_size' => 1,
+            'max_team_size' => 4,
+            'start_date' => Carbon::now()->subDay()->toDateString(),
+            'end_date' => Carbon::now()->addDays(7)->toDateString(),
+            'deadline_at' => Carbon::now()->addDays(2),
+            'created_by' => $ownerProfessor->id,
+        ]);
+
+        $deliverable = Deliverable::create([
+            'project_id' => $project->id,
+            'title' => 'Predare admin',
+            'description' => null,
+            'due_at' => Carbon::now()->addDay(),
+            'submission_type' => 'file',
+            'max_points' => 50,
+            'created_by' => $ownerProfessor->id,
+        ]);
+
+        $this->actingAs($student)->post(route('deliverables.submit', $deliverable), [
+            'submission_file' => UploadedFile::fake()->create('tema-finala.zip', 120),
+        ]);
+
+        $submission = DeliverableSubmission::query()
+            ->where('deliverable_id', $deliverable->id)
+            ->where('student_user_id', $student->id)
+            ->first();
+
+        $this->assertNotNull($submission);
+
+        $this->actingAs($admin)
+            ->post(route('deliverables.submissions.grade', $submission), [
+                'grade_points' => 47,
+                'grade_feedback' => 'Corectat la nivel administrativ.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $submission->refresh();
+        $this->assertSame('47.00', $submission->grade_points);
+        $this->assertSame($admin->id, $submission->graded_by_user_id);
+
+        Mail::assertSent(DeliverableSubmissionGradedMail::class, 1);
+    }
+
+    public function test_grading_rejects_values_over_max_points(): void
+    {
+        Storage::fake('local');
+        Mail::fake();
+
+        $professor = User::factory()->create(['role' => 'profesor']);
+        $student = User::factory()->create(['role' => 'student']);
+        $classroom = $this->createClassroomWithMembers($professor, $student, 'IA');
+
+        $project = Project::create([
+            'title' => 'Proiect validare nota',
+            'description' => 'Descriere',
+            'domain' => 'IA',
+            'classroom_id' => $classroom->id,
+            'status' => 'open',
+            'visibility' => 'public',
+            'min_team_size' => 1,
+            'max_team_size' => 4,
+            'start_date' => Carbon::now()->subDay()->toDateString(),
+            'end_date' => Carbon::now()->addDays(7)->toDateString(),
+            'deadline_at' => Carbon::now()->addDays(2),
+            'created_by' => $professor->id,
+        ]);
+
+        $deliverable = Deliverable::create([
+            'project_id' => $project->id,
+            'title' => 'Predare cu punctaj mic',
+            'description' => null,
+            'due_at' => Carbon::now()->addDay(),
+            'submission_type' => 'file',
+            'max_points' => 10,
+            'created_by' => $professor->id,
+        ]);
+
+        $this->actingAs($student)->post(route('deliverables.submit', $deliverable), [
+            'submission_file' => UploadedFile::fake()->create('fisier.zip', 80),
+        ]);
+
+        $submission = DeliverableSubmission::query()
+            ->where('deliverable_id', $deliverable->id)
+            ->where('student_user_id', $student->id)
+            ->first();
+
+        $this->assertNotNull($submission);
+
+        $this->actingAs($professor)
+            ->post(route('deliverables.submissions.grade', $submission), [
+                'grade_points' => 11,
+            ])
+            ->assertSessionHasErrors('grade_points');
+
+        $submission->refresh();
+        $this->assertNull($submission->grade_points);
+        $this->assertNull($submission->graded_by_user_id);
+        Mail::assertNothingSent();
     }
 
     private function createClassroomWithMembers(User $professor, User $student, string $subject): Classroom

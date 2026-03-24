@@ -3,8 +3,8 @@
 @section('content')
     <section class="hero">
         <div class="pill">Resetare parola</div>
-        <h1>Ai uitat parola?</h1>
-        <p>Trimite emailul si iti oferim un link pentru resetare.</p>
+        <h1>Recuperare acces</h1>
+        <p>Introdu adresa de email, iar noi iti trimitem un link sigur pentru setarea unei parole noi.</p>
     </section>
 
     <section class="grid">
@@ -31,9 +31,9 @@
         </div>
 
         <div class="card span-6">
-            <h3>Siguranta</h3>
-            <p class="muted">Linkul expira dupa 60 de minute. Daca nu ai primit email, verifica spam.</p>
-            <a href="{{ route('login') }}" class="btn btn-secondary">Inapoi la login</a>
+            <h3>Detalii de securitate</h3>
+            <p class="muted">Linkul de resetare este valabil 60 de minute. Daca nu apare in Inbox, verifica si folderul Spam.</p>
+            <a href="{{ route('login') }}" class="btn btn-secondary">Revino la autentificare</a>
         </div>
     </section>
 @endsection

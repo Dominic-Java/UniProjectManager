@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Mail\ClassroomInvitationMail;
 use App\Mail\ClassroomJoinedConfirmationMail;
 use App\Models\Classroom;
 use App\Models\ClassroomInvitation;
@@ -25,6 +26,7 @@ class ClassroomsController extends Controller
             $classrooms = Classroom::query()
                 ->where('created_by', $user->id)
                 ->withCount(['members', 'projects'])
+                ->orderByDesc('is_active')
                 ->orderByDesc('created_at')
                 ->get();
 
@@ -32,6 +34,7 @@ class ClassroomsController extends Controller
         } else {
             $classrooms = Classroom::query()
                 ->whereHas('members', fn ($query) => $query->where('users.id', $user->id))
+                ->where('is_active', true)
                 ->withCount(['members', 'projects'])
                 ->orderByDesc('created_at')
                 ->get();
@@ -101,7 +104,7 @@ class ClassroomsController extends Controller
 
         return redirect()
             ->route('classrooms.show', $classroom)
-            ->with('success', 'Classroom-ul a fost creat. Codul de acces a fost generat automat.');
+            ->with('success', 'Classroom-ul a fost creat. Codul de acces este disponibil in pagina de detalii.');
     }
 
     public function show(Request $request, Classroom $classroom): View
@@ -143,7 +146,7 @@ class ClassroomsController extends Controller
             ->first();
 
         if (!$classroom) {
-            return back()->withErrors(['classroom_code' => 'Cod invalid sau classroom inactiv.']);
+            return back()->withErrors(['classroom_code' => 'Codul introdus nu este valid sau classroom-ul nu mai este activ.']);
         }
 
         $alreadyMember = DB::table('classroom_members')
@@ -169,60 +172,111 @@ class ClassroomsController extends Controller
 
         return redirect()
             ->route('classrooms.show', $classroom)
-            ->with('success', 'Ai intrat in classroom cu succes.');
+            ->with('success', 'Te-ai alaturat classroom-ului cu succes.');
     }
 
     public function sendInvitation(Request $request, Classroom $classroom): RedirectResponse
     {
         abort_unless(ClassroomAccess::canManageClassroom($request->user(), $classroom), 403);
 
+        if (!$classroom->is_active) {
+            return back()->withErrors(['emails' => 'Classroom-ul este arhivat, de aceea nu mai pot fi trimise invitatii.']);
+        }
+
         $validated = $request->validate([
-            'email' => ['required', 'email'],
+            'email' => ['nullable', 'email'],
+            'emails' => ['nullable', 'string', 'max:4000'],
             'message' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $student = User::query()->where('email', strtolower($validated['email']))->first();
-        if (!$student) {
-            return back()->withErrors(['email' => 'Nu exista utilizator cu acest email.']);
-        }
-        if (!$student->hasRole('student')) {
-            return back()->withErrors(['email' => 'Invitatiile pentru classroom pot fi trimise doar catre studenti.']);
-        }
-
-        $alreadyMember = DB::table('classroom_members')
-            ->where('classroom_id', $classroom->id)
-            ->where('user_id', $student->id)
-            ->exists();
-
-        if ($alreadyMember) {
-            return back()->withErrors(['email' => 'Studentul este deja in classroom.']);
+        $emails = $this->extractInvitationEmails($validated['emails'] ?? null, $validated['email'] ?? null);
+        if ($emails === []) {
+            return back()
+                ->withInput()
+                ->withErrors(['emails' => 'Te rugam sa introduci cel putin o adresa de email valida.']);
         }
 
-        $pendingInvite = ClassroomInvitation::query()
-            ->where('classroom_id', $classroom->id)
-            ->where('student_user_id', $student->id)
-            ->where('status', 'pending')
-            ->exists();
+        $sentCount = 0;
+        $skipped = [];
 
-        if ($pendingInvite) {
-            return back()->withErrors(['email' => 'Exista deja o invitatie activa pentru acest student.']);
+        foreach ($emails as $email) {
+            $student = User::query()->where('email', $email)->first();
+            if (!$student) {
+                $skipped[] = $email . ' (nu exista cont)';
+                continue;
+            }
+
+            if (!$student->hasRole('student')) {
+                $skipped[] = $email . ' (nu are rol student)';
+                continue;
+            }
+
+            $alreadyMember = DB::table('classroom_members')
+                ->where('classroom_id', $classroom->id)
+                ->where('user_id', $student->id)
+                ->exists();
+
+            if ($alreadyMember) {
+                $skipped[] = $email . ' (deja in classroom)';
+                continue;
+            }
+
+            $pendingInvite = ClassroomInvitation::query()
+                ->where('classroom_id', $classroom->id)
+                ->where('student_user_id', $student->id)
+                ->where('status', 'pending')
+                ->exists();
+
+            if ($pendingInvite) {
+                $skipped[] = $email . ' (invitatie activa deja existenta)';
+                continue;
+            }
+
+            $invitation = ClassroomInvitation::create([
+                'classroom_id' => $classroom->id,
+                'student_user_id' => $student->id,
+                'invited_by' => $request->user()->id,
+                'status' => 'pending',
+                'message' => $validated['message'] ?? null,
+                'expires_at' => now()->addDays(7),
+            ]);
+
+            $this->sendInvitationMail(
+                $student,
+                $classroom,
+                $request->user(),
+                $invitation->message,
+                $invitation->expires_at?->format('d.m.Y H:i')
+            );
+
+            AuditLogger::log('classrooms.invitation.send', $request->user(), 'classroom', $classroom->id, [
+                'invitation_id' => $invitation->id,
+                'student_user_id' => $student->id,
+            ]);
+
+            $sentCount++;
         }
 
-        $invitation = ClassroomInvitation::create([
-            'classroom_id' => $classroom->id,
-            'student_user_id' => $student->id,
-            'invited_by' => $request->user()->id,
-            'status' => 'pending',
-            'message' => $validated['message'] ?? null,
-            'expires_at' => now()->addDays(7),
-        ]);
+        if ($sentCount === 0) {
+            $details = implode(', ', array_slice($skipped, 0, 3));
+            $suffix = count($skipped) > 3 ? ', ...' : '';
 
-        AuditLogger::log('classrooms.invitation.send', $request->user(), 'classroom', $classroom->id, [
-            'invitation_id' => $invitation->id,
-            'student_user_id' => $student->id,
-        ]);
+            return back()
+                ->withInput()
+                ->withErrors(['emails' => 'Nu am putut trimite invitatii. ' . $details . $suffix]);
+        }
 
-        return back()->with('success', 'Invitatia in classroom a fost trimisa.');
+        $successMessage = $sentCount === 1
+            ? 'Invitatia pentru classroom a fost trimisa.'
+            : 'Au fost trimise ' . $sentCount . ' invitatii pentru classroom.';
+
+        if ($skipped !== []) {
+            $details = implode(', ', array_slice($skipped, 0, 3));
+            $suffix = count($skipped) > 3 ? ', ...' : '';
+            $successMessage .= ' Adrese omise: ' . $details . $suffix . '.';
+        }
+
+        return back()->with('success', $successMessage);
     }
 
     public function respondInvitation(Request $request, ClassroomInvitation $invitation): RedirectResponse
@@ -244,7 +298,7 @@ class ClassroomsController extends Controller
             && $invitation->expires_at
             && $invitation->expires_at->isPast()
         ) {
-            return back()->with('error', 'Invitatia a expirat.');
+            return back()->with('error', 'Invitatia a expirat. Solicita o noua invitatie.');
         }
 
         $status = $validated['action'] === 'accept' ? 'accepted' : 'rejected';
@@ -305,6 +359,52 @@ class ClassroomsController extends Controller
         return back()->with('success', 'Invitatia a fost anulata.');
     }
 
+    public function archive(Request $request, Classroom $classroom): RedirectResponse
+    {
+        abort_unless(ClassroomAccess::canManageClassroom($request->user(), $classroom), 403);
+
+        if (!$classroom->is_active) {
+            return back()->with('success', 'Classroom-ul este deja arhivat.');
+        }
+
+        DB::transaction(function () use ($classroom): void {
+            $classroom->update(['is_active' => false]);
+
+            ClassroomInvitation::query()
+                ->where('classroom_id', $classroom->id)
+                ->where('status', 'pending')
+                ->update([
+                    'status' => 'canceled',
+                    'responded_at' => now(),
+                    'updated_at' => now(),
+                ]);
+        });
+
+        AuditLogger::log('classrooms.archive', $request->user(), 'classroom', $classroom->id, [
+            'name' => $classroom->name,
+        ]);
+
+        return back()->with('success', 'Classroom-ul a fost arhivat.');
+    }
+
+    public function destroy(Request $request, Classroom $classroom): RedirectResponse
+    {
+        abort_unless(ClassroomAccess::canManageClassroom($request->user(), $classroom), 403);
+
+        $classroomId = $classroom->id;
+        $classroomName = $classroom->name;
+        $classroomCode = $classroom->code;
+
+        $classroom->delete();
+
+        AuditLogger::log('classrooms.delete', $request->user(), 'classroom', $classroomId, [
+            'name' => $classroomName,
+            'code' => $classroomCode,
+        ]);
+
+        return redirect()->route('classrooms.index')->with('success', 'Classroom-ul a fost eliminat.');
+    }
+
     private function sendJoinConfirmationMail(User $student, Classroom $classroom, string $joinedVia): void
     {
         try {
@@ -320,5 +420,68 @@ class ClassroomsController extends Controller
                 'error' => $exception->getMessage(),
             ]);
         }
+    }
+
+    private function sendInvitationMail(
+        User $student,
+        Classroom $classroom,
+        User $invitedBy,
+        ?string $messageText,
+        ?string $expiresAt
+    ): void {
+        try {
+            $classroom->loadMissing('createdBy');
+            Mail::to($student->email)->send(new ClassroomInvitationMail(
+                $student,
+                $classroom,
+                $invitedBy,
+                $messageText,
+                $expiresAt
+            ));
+
+            AuditLogger::log('classrooms.invitation_mail.sent', $invitedBy, 'classroom', $classroom->id, [
+                'student_user_id' => $student->id,
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+            AuditLogger::log('classrooms.invitation_mail.failed', $invitedBy, 'classroom', $classroom->id, [
+                'student_user_id' => $student->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    private function extractInvitationEmails(?string $bulkInput, ?string $singleInput): array
+    {
+        $raw = [];
+
+        if ($bulkInput !== null && trim($bulkInput) !== '') {
+            $raw[] = $bulkInput;
+        }
+        if ($singleInput !== null && trim($singleInput) !== '') {
+            $raw[] = $singleInput;
+        }
+
+        if ($raw === []) {
+            return [];
+        }
+
+        $emails = [];
+        $parts = preg_split('/[\s,;]+/', implode("\n", $raw)) ?: [];
+
+        foreach ($parts as $part) {
+            $candidate = strtolower(trim($part));
+            if ($candidate === '') {
+                continue;
+            }
+
+            if (!filter_var($candidate, FILTER_VALIDATE_EMAIL)) {
+                continue;
+            }
+
+            $emails[$candidate] = true;
+        }
+
+        return array_keys($emails);
     }
 }

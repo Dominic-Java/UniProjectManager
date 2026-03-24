@@ -24,7 +24,9 @@ class TeamsController extends Controller
             ->withCount('members')
             ->orderByDesc('created_at');
 
-        if ($user->hasRole('profesor')) {
+        if ($user->isAdmin()) {
+            // Adminul vede toate echipele, indiferent de profesorul creator.
+        } elseif ($user->hasRole('profesor')) {
             $teamsQuery->whereHas('project', fn ($query) => ClassroomAccess::scopeManageableProjects($query, $user));
         } else {
             $teamsQuery->where(function ($query) use ($user): void {
@@ -42,7 +44,9 @@ class TeamsController extends Controller
             ->get();
 
         $projectQuery = Project::query()->openForParticipation();
-        if ($user->hasRole('profesor')) {
+        if ($user->isAdmin()) {
+            // Adminul are acces global.
+        } elseif ($user->hasRole('profesor')) {
             ClassroomAccess::scopeManageableProjects($projectQuery, $user);
         } else {
             ClassroomAccess::scopeVisibleProjects($projectQuery, $user);
@@ -63,7 +67,9 @@ class TeamsController extends Controller
             ->openForParticipation()
             ->orderByDesc('created_at');
 
-        if ($user?->hasRole('profesor')) {
+        if ($user?->isAdmin()) {
+            // Adminul poate selecta din toate proiectele deschise.
+        } elseif ($user?->hasRole('profesor')) {
             ClassroomAccess::scopeManageableProjects($projectsQuery, $user);
         } elseif ($user?->hasRole('student')) {
             ClassroomAccess::scopeVisibleProjects($projectsQuery, $user);
@@ -74,7 +80,7 @@ class TeamsController extends Controller
             ->orderBy('first_name')
             ->orderBy('last_name');
 
-        if ($user?->hasRole('profesor')) {
+        if ($user?->isAdmin() || $user?->hasRole('profesor')) {
             // Profesorul vede lista completa; validarea finala se face pe proiect/classroom la salvare.
         } else {
             $studentsQuery->whereRaw('1 = 0');
@@ -120,14 +126,14 @@ class TeamsController extends Controller
             if (empty($validated['captain_user_id'])) {
                 return back()
                     ->withInput()
-                    ->withErrors(['captain_user_id' => 'Profesorul trebuie sa desemneze un capitan (student).']);
+                    ->withErrors(['captain_user_id' => 'Te rugam sa desemnezi un lider de echipa (student).']);
             }
 
             $captain = User::findOrFail((int) $validated['captain_user_id']);
             if (!$captain->hasRole('student')) {
                 return back()
                     ->withInput()
-                    ->withErrors(['captain_user_id' => 'Capitanul echipei trebuie sa aiba rolul student.']);
+                    ->withErrors(['captain_user_id' => 'Liderul echipei trebuie sa aiba rolul de student.']);
             }
 
             if ($project->classroom_id) {
@@ -146,7 +152,7 @@ class TeamsController extends Controller
             if ($this->isUserAlreadyInProjectTeam($project->id, $captain->id)) {
                 return back()
                     ->withInput()
-                    ->withErrors(['captain_user_id' => 'Studentul selectat este deja intr-o alta echipa pentru acest proiect.']);
+                    ->withErrors(['captain_user_id' => 'Studentul selectat face deja parte dintr-o alta echipa pentru acest proiect.']);
             }
 
             $leaderId = $captain->id;
@@ -162,14 +168,14 @@ class TeamsController extends Controller
                 if (!$studentInClassroom) {
                     return back()
                         ->withInput()
-                        ->withErrors(['project_id' => 'Nu esti inscris in classroom-ul acestui proiect.']);
+                        ->withErrors(['project_id' => 'Nu esti inscris in classroom-ul asociat acestui proiect.']);
                 }
             }
 
             if ($this->isUserAlreadyInProjectTeam($project->id, $request->user()->id)) {
                 return back()
                     ->withInput()
-                    ->withErrors(['project_id' => 'Esti deja membru intr-o echipa pentru acest proiect.']);
+                    ->withErrors(['project_id' => 'Faci deja parte dintr-o echipa pentru acest proiect.']);
             }
         }
 
@@ -191,7 +197,7 @@ class TeamsController extends Controller
 
         AuditLogger::log('teams.create', $request->user(), 'team', $team->id);
 
-        return redirect()->route('teams.show', $team)->with('success', 'Echipa a fost creata.');
+        return redirect()->route('teams.show', $team)->with('success', 'Echipa a fost creata cu succes.');
     }
 
     public function show(Team $team): View
@@ -249,7 +255,7 @@ class TeamsController extends Controller
         $team->update($validated);
         AuditLogger::log('teams.update', $request->user(), 'team', $team->id);
 
-        return redirect()->route('teams.show', $team)->with('success', 'Echipa a fost actualizata.');
+        return redirect()->route('teams.show', $team)->with('success', 'Modificarile echipei au fost salvate.');
     }
 
     public function destroy(Team $team): RedirectResponse
@@ -263,7 +269,7 @@ class TeamsController extends Controller
         $team->delete();
         AuditLogger::log('teams.delete', request()->user(), 'team', $teamId);
 
-        return redirect()->route('teams.index')->with('success', 'Echipa a fost stearsa.');
+        return redirect()->route('teams.index')->with('success', 'Echipa a fost eliminata.');
     }
 
     public function sendInvitation(Request $request, Team $team): RedirectResponse
@@ -280,10 +286,10 @@ class TeamsController extends Controller
 
         $user = User::where('email', $validated['email'])->first();
         if (!$user) {
-            return back()->withErrors(['email' => 'Utilizatorul nu exista.']);
+            return back()->withErrors(['email' => 'Nu exista niciun utilizator cu aceasta adresa de email.']);
         }
         if (!$user->hasRole('student')) {
-            return back()->withErrors(['email' => 'In echipe pot fi invitati doar studenti.']);
+            return back()->withErrors(['email' => 'In echipe pot fi invitati doar utilizatori cu rol de student.']);
         }
 
         $team->loadMissing('project');
@@ -309,15 +315,15 @@ class TeamsController extends Controller
             ->exists();
 
         if ($alreadyMember) {
-            return back()->withErrors(['email' => 'Utilizatorul este deja membru in echipa.']);
+            return back()->withErrors(['email' => 'Acest utilizator este deja membru in echipa.']);
         }
 
         if ($this->isUserAlreadyInProjectTeam($team->project_id, $user->id, $team->id)) {
-            return back()->withErrors(['email' => 'Studentul este deja intr-o alta echipa pe acest proiect.']);
+            return back()->withErrors(['email' => 'Studentul face deja parte dintr-o alta echipa pentru acest proiect.']);
         }
 
         if ($this->teamIsAtCapacity($team)) {
-            return back()->withErrors(['email' => 'Echipa a atins numarul maxim de membri setat in proiect.']);
+            return back()->withErrors(['email' => 'Echipa a atins deja numarul maxim de membri setat in proiect.']);
         }
 
         $pendingInvite = TeamInvitation::where('team_id', $team->id)
@@ -343,7 +349,7 @@ class TeamsController extends Controller
             'invited_user_id' => $user->id,
         ]);
 
-        return back()->with('success', 'Invitatia a fost trimisa.');
+        return back()->with('success', 'Invitatia a fost trimisa cu succes.');
     }
 
     public function respondInvitation(Request $request, TeamInvitation $invitation): RedirectResponse
@@ -369,11 +375,11 @@ class TeamsController extends Controller
 
         if ($status === 'accepted') {
             if (!$request->user()->hasRole('student')) {
-                return back()->with('error', 'Doar studentii pot accepta invitatii in echipa.');
+                return back()->with('error', 'Doar utilizatorii cu rol de student pot accepta invitatii in echipa.');
             }
 
             if ($this->isUserAlreadyInProjectTeam($invitation->team->project_id, $request->user()->id, $invitation->team_id)) {
-                return back()->with('error', 'Esti deja intr-o alta echipa pentru acest proiect.');
+                return back()->with('error', 'Faci deja parte dintr-o alta echipa pentru acest proiect.');
             }
 
             if ($invitation->team->project->classroom_id) {
@@ -383,12 +389,12 @@ class TeamsController extends Controller
                     ->exists();
 
                 if (!$inClassroom) {
-                    return back()->with('error', 'Trebuie sa fii inscris in classroom-ul proiectului inainte sa accepti invitatia.');
+                    return back()->with('error', 'Pentru a accepta invitatia, trebuie mai intai sa fii inscris in classroom-ul proiectului.');
                 }
             }
 
             if ($this->teamIsAtCapacity($invitation->team)) {
-                return back()->with('error', 'Echipa a atins numarul maxim de membri setat in proiect.');
+                return back()->with('error', 'Echipa a atins deja numarul maxim de membri setat in proiect.');
             }
 
             DB::table('team_members')->updateOrInsert(
@@ -442,10 +448,10 @@ class TeamsController extends Controller
 
         $user = User::where('email', $validated['email'])->first();
         if (!$user) {
-            return back()->withErrors(['email' => 'Utilizatorul nu exista.']);
+            return back()->withErrors(['email' => 'Nu exista niciun utilizator cu aceasta adresa de email.']);
         }
         if (!$user->hasRole('student')) {
-            return back()->withErrors(['email' => 'In echipe pot fi adaugati doar studenti.']);
+            return back()->withErrors(['email' => 'In echipe pot fi adaugati doar utilizatori cu rol de student.']);
         }
 
         $team->loadMissing('project');
@@ -466,15 +472,15 @@ class TeamsController extends Controller
             ->exists();
 
         if ($alreadyMember) {
-            return back()->withErrors(['email' => 'Utilizatorul este deja membru.']);
+            return back()->withErrors(['email' => 'Acest utilizator este deja membru in echipa.']);
         }
 
         if ($this->isUserAlreadyInProjectTeam($team->project_id, $user->id, $team->id)) {
-            return back()->withErrors(['email' => 'Studentul este deja intr-o alta echipa pe acest proiect.']);
+            return back()->withErrors(['email' => 'Studentul face deja parte dintr-o alta echipa pentru acest proiect.']);
         }
 
         if ($this->teamIsAtCapacity($team)) {
-            return back()->withErrors(['email' => 'Echipa a atins numarul maxim de membri setat in proiect.']);
+            return back()->withErrors(['email' => 'Echipa a atins deja numarul maxim de membri setat in proiect.']);
         }
 
         DB::table('team_members')->insert([
@@ -488,7 +494,7 @@ class TeamsController extends Controller
             'user_id' => $user->id,
         ]);
 
-        return back()->with('success', 'Membrul a fost adaugat.');
+        return back()->with('success', 'Membrul a fost adaugat in echipa.');
     }
 
     public function removeMember(Team $team, User $user): RedirectResponse
@@ -507,7 +513,7 @@ class TeamsController extends Controller
             'user_id' => $user->id,
         ]);
 
-        return back()->with('success', 'Membrul a fost eliminat.');
+        return back()->with('success', 'Membrul a fost eliminat din echipa.');
     }
 
     private function abortIfCannotManage(Team $team): void
@@ -521,6 +527,10 @@ class TeamsController extends Controller
     {
         if (!$user) {
             return false;
+        }
+
+        if ($user->isAdmin()) {
+            return true;
         }
 
         if ($user->hasRole('profesor')) {
@@ -582,7 +592,7 @@ class TeamsController extends Controller
             return null;
         }
 
-        return back()->with('error', 'Proiectul este inchis dupa deadline. Nu mai pot fi facute modificari.');
+        return back()->with('error', 'Proiectul este inchis dupa termen. Nu mai pot fi facute modificari.');
     }
 
     private function teamIsAtCapacity(Team $team): bool
