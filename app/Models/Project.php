@@ -100,7 +100,7 @@ class Project extends Model
             return false;
         }
 
-        $this->status = 'closed';
+        $this->status = 'archived';
         $this->save();
 
         return true;

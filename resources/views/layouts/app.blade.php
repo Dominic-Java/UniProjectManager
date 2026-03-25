@@ -114,6 +114,31 @@
             align-items: center;
             justify-content: flex-end;
         }
+        .user-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            object-fit: cover;
+            border: 1px solid rgba(249, 115, 22, 0.35);
+        }
+        .user-avatar-fallback {
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            border: 1px solid rgba(249, 115, 22, 0.35);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: #9a3412;
+            background: rgba(255, 255, 255, 0.75);
+            font-size: 13px;
+        }
+        body[data-theme="dark"] .user-avatar-fallback {
+            color: #e2e8f0;
+            border-color: #475569;
+            background: rgba(15, 23, 42, 0.6);
+        }
         .menu-links a {
             color: var(--muted);
             font-weight: 600;
@@ -372,7 +397,7 @@
                         </button>
                         <div class="menu-dropdown-panel" role="menu" aria-label="Classroom">
                             <a role="menuitem" href="{{ route('classrooms.index') }}">Classroom-uri</a>
-                            @if(auth()->user()?->hasRole('profesor'))
+                            @if(auth()->user()?->hasRole('profesor') || auth()->user()?->isAdmin())
                                 <a role="menuitem" href="{{ route('classrooms.create') }}">Classroom nou</a>
                             @endif
                         </div>
@@ -380,6 +405,7 @@
                     <a href="{{ route('projects.index') }}">Proiecte</a>
                     <a href="{{ route('teams.index') }}">Echipe</a>
                     <a href="{{ route('deliverables.index') }}">Livrabile</a>
+                    <a href="{{ route('catalog.index') }}">Catalog</a>
                     <a href="{{ route('milestones.index') }}">Etape</a>
                     <a href="{{ route('profile.edit') }}">Profil</a>
                     @if(auth()->user()?->isAdmin())
@@ -387,6 +413,13 @@
                     @endif
                 </div>
                 <div class="menu-actions">
+                    @if(!empty(auth()->user()?->avatar_url))
+                        <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->name }}" class="user-avatar">
+                    @else
+                        <span class="user-avatar-fallback">
+                            {{ strtoupper(substr(auth()->user()->first_name ?? auth()->user()->name, 0, 1)) }}
+                        </span>
+                    @endif
                     <span class="pill">{{ auth()->user()->name }} ({{ ucfirst(auth()->user()->role) }})</span>
                     <form method="POST" action="{{ route('profile.theme.toggle') }}">
                         @csrf

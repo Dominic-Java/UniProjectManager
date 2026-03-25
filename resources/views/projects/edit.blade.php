@@ -18,6 +18,7 @@
             <form method="POST" action="{{ route('projects.update', $project) }}">
                 @csrf
                 @method('PUT')
+                @php($today = now()->toDateString())
 
                 <div style="margin-bottom:12px;">
                     <label class="muted">Classroom</label>
@@ -60,15 +61,15 @@
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;">
                     <div>
                         <label class="muted">Data inceput</label>
-                        <input type="date" name="start_date" value="{{ old('start_date', optional($project->start_date)->format('Y-m-d')) }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
+                        <input type="date" name="start_date" min="{{ $today }}" value="{{ old('start_date', optional($project->start_date)->format('Y-m-d')) }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
                     </div>
                     <div>
                         <label class="muted">Data finalizare</label>
-                        <input type="date" name="end_date" value="{{ old('end_date', optional($project->end_date)->format('Y-m-d')) }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
+                        <input type="date" name="end_date" min="{{ $today }}" value="{{ old('end_date', optional($project->end_date)->format('Y-m-d')) }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
                     </div>
                     <div>
                         <label class="muted">Data deadline inchidere</label>
-                        <input type="date" name="deadline_date" value="{{ old('deadline_date', optional($project->deadline_at)->format('Y-m-d')) }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
+                        <input type="date" name="deadline_date" min="{{ $today }}" value="{{ old('deadline_date', optional($project->deadline_at)->format('Y-m-d')) }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);">
                     </div>
                     <div>
                         <label class="muted">Ora deadline</label>

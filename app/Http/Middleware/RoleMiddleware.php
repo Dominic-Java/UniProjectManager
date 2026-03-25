@@ -12,7 +12,15 @@ class RoleMiddleware
     {
         $user = $request->user();
 
-        if (!$user || !$user->hasRole(...$roles)) {
+        if (!$user) {
+            abort(403, 'Aceasta sectiune este disponibila doar pentru rolurile autorizate.');
+        }
+
+        if ($user->isAdmin()) {
+            return $next($request);
+        }
+
+        if (!$user->hasRole(...$roles)) {
             abort(403, 'Aceasta sectiune este disponibila doar pentru rolurile autorizate.');
         }
 

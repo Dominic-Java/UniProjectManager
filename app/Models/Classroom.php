@@ -49,6 +49,11 @@ class Classroom extends Model
         return $this->hasMany(ClassroomInvitation::class, 'classroom_id');
     }
 
+    public function grades(): HasMany
+    {
+        return $this->hasMany(ClassroomGrade::class, 'classroom_id');
+    }
+
     public static function generateCode(): string
     {
         do {

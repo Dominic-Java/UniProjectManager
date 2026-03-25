@@ -11,6 +11,7 @@ use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\ProjectMaterialsController;
 use App\Http\Controllers\Web\ClassroomsController;
+use App\Http\Controllers\Web\CatalogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,6 +44,14 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:5,1')
         ->name('profile.password-reset-link');
     Route::post('/profile/theme-toggle', [ProfileController::class, 'toggleTheme'])->name('profile.theme.toggle');
+
+    Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog.index');
+    Route::post('/catalog/classrooms/{classroom}/grades', [CatalogController::class, 'storeGrade'])
+        ->middleware('throttle:20,1')
+        ->name('catalog.grades.store');
+    Route::post('/catalog/classrooms/{classroom}/retake-emails', [CatalogController::class, 'sendRetakeDetails'])
+        ->middleware('throttle:10,1')
+        ->name('catalog.retake-emails.send');
 
     Route::get('/classrooms', [ClassroomsController::class, 'index'])->name('classrooms.index');
     Route::get('/classrooms/create', [ClassroomsController::class, 'create'])

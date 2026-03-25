@@ -10,8 +10,10 @@ use App\Models\Project;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ClassroomFlowAndAccessTest extends TestCase
@@ -360,6 +362,31 @@ class ClassroomFlowAndAccessTest extends TestCase
             ->assertRedirect(route('dashboard'));
 
         $this->assertSame('dark', $user->fresh()->theme_preference);
+    }
+
+    public function test_user_can_upload_profile_avatar(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create([
+            'role' => 'student',
+            'first_name' => 'Alex',
+            'last_name' => 'Pop',
+        ]);
+
+        $this->actingAs($user)
+            ->put(route('profile.update'), [
+                'first_name' => 'Alex',
+                'last_name' => 'Pop',
+                'avatar' => UploadedFile::fake()->image('avatar.jpg', 120, 120),
+            ])
+            ->assertRedirect();
+
+        $user->refresh();
+        $this->assertNotNull($user->avatar_url);
+
+        $storedPath = ltrim(str_replace('/storage/', '', (string) $user->avatar_url), '/');
+        Storage::disk('public')->assertExists($storedPath);
     }
 
     public function test_professor_sees_only_owned_classrooms_and_cannot_open_other_professor_classroom(): void

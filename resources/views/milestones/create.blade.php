@@ -21,6 +21,7 @@
             @else
                 <form method="POST" action="{{ route('milestones.store') }}">
                     @csrf
+                    @php($minDueAt = now()->format('Y-m-d\\TH:i'))
 
                     <div style="margin-bottom:12px;">
                         <label class="label" for="project_id">Proiect</label>
@@ -45,7 +46,7 @@
                     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px;">
                         <div>
                             <label class="label" for="due_at">Termen limita</label>
-                            <input class="input" id="due_at" type="datetime-local" name="due_at" value="{{ old('due_at') }}">
+                            <input class="input" id="due_at" type="datetime-local" name="due_at" min="{{ $minDueAt }}" value="{{ old('due_at') }}">
                         </div>
                         <div>
                             <label class="label" for="weight">Pondere</label>

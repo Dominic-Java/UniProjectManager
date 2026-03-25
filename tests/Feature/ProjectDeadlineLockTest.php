@@ -29,7 +29,7 @@ class ProjectDeadlineLockTest extends TestCase
         ]);
     }
 
-    public function test_project_is_automatically_closed_after_deadline(): void
+    public function test_project_is_automatically_archived_after_deadline(): void
     {
         $this->assertSame('sqlite', config('database.default'));
 
@@ -52,10 +52,10 @@ class ProjectDeadlineLockTest extends TestCase
             ->get(route('projects.index'))
             ->assertOk();
 
-        $this->assertSame('closed', $project->fresh()->status);
+        $this->assertSame('archived', $project->fresh()->status);
     }
 
-    public function test_project_is_automatically_deleted_after_retention_window(): void
+    public function test_project_is_not_deleted_automatically_after_retention_window(): void
     {
         config(['uniprojectmanager.expired_project_retention_hours' => 24]);
 
@@ -78,9 +78,10 @@ class ProjectDeadlineLockTest extends TestCase
             ->get(route('projects.index'))
             ->assertOk();
 
-        $this->assertDatabaseMissing('projects', [
+        $this->assertDatabaseHas('projects', [
             'id' => $project->id,
         ]);
+        $this->assertSame('archived', $project->fresh()->status);
     }
 
     public function test_professor_can_create_project_using_24h_deadline_fields(): void
@@ -135,6 +136,30 @@ class ProjectDeadlineLockTest extends TestCase
             ->assertSessionHasErrors('deadline_time');
     }
 
+    public function test_project_creation_rejects_start_date_in_the_past(): void
+    {
+        $professor = User::factory()->create(['role' => 'profesor']);
+
+        $classroom = Classroom::create([
+            'code' => Classroom::generateCode(),
+            'name' => 'Clasa Data Invalida',
+            'subject' => 'Inginerie software',
+            'created_by' => $professor->id,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($professor)
+            ->post(route('projects.store'), [
+                'classroom_id' => $classroom->id,
+                'title' => 'Proiect data trecuta',
+                'description' => 'Descriere proiect',
+                'start_date' => Carbon::now()->subDay()->toDateString(),
+                'deadline_date' => Carbon::now()->addDay()->toDateString(),
+                'deadline_time' => '11:00',
+            ])
+            ->assertSessionHasErrors('start_date');
+    }
+
     public function test_cannot_send_team_invitation_when_project_is_closed_by_deadline(): void
     {
         $professor = User::factory()->create(['role' => 'profesor']);
@@ -167,7 +192,7 @@ class ProjectDeadlineLockTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertSame('closed', $project->fresh()->status);
+        $this->assertSame('archived', $project->fresh()->status);
         $this->assertDatabaseCount('team_invitations', 0);
     }
 
@@ -226,7 +251,7 @@ class ProjectDeadlineLockTest extends TestCase
         $this->artisan('projects:close-expired')
             ->assertSuccessful();
 
-        $this->assertSame('closed', $expiredOpen->fresh()->status);
+        $this->assertSame('archived', $expiredOpen->fresh()->status);
         $this->assertSame('open', $futureOpen->fresh()->status);
         $this->assertSame('archived', $expiredArchived->fresh()->status);
     }
@@ -267,7 +292,7 @@ class ProjectDeadlineLockTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertSame('closed', $project->fresh()->status);
+        $this->assertSame('archived', $project->fresh()->status);
         $this->assertDatabaseHas('milestones', [
             'id' => $milestone->id,
             'title' => 'Milestone initial',

@@ -27,7 +27,7 @@ class ProjectsController extends Controller
 
     public function create(Request $request)
     {
-        abort_unless(auth()->user()?->hasRole('profesor'), 403);
+        abort_unless(auth()->user()?->hasRole('profesor') || auth()->user()?->isAdmin(), 403);
 
         $classroomsQuery = Classroom::query()
             ->orderBy('subject')
@@ -48,7 +48,7 @@ class ProjectsController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless(auth()->user()?->hasRole('profesor'), 403);
+        abort_unless(auth()->user()?->hasRole('profesor') || auth()->user()?->isAdmin(), 403);
         $this->mergeDeadlineAtFrom24HourInputs($request);
 
         $validated = $request->validate([
@@ -59,9 +59,9 @@ class ProjectsController extends Controller
             'status' => ['nullable', 'in:draft,open,in_progress,closed,archived'],
             'min_team_size' => ['nullable', 'integer', 'min:1', 'max:20', 'lte:max_team_size'],
             'max_team_size' => ['nullable', 'integer', 'min:1', 'max:20', 'gte:min_team_size'],
-            'start_date' => ['nullable', 'date'],
-            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'deadline_at' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'start_date' => ['nullable', 'date', 'after_or_equal:today'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:today', 'after_or_equal:start_date'],
+            'deadline_at' => ['nullable', 'date', 'after_or_equal:now', 'after_or_equal:start_date'],
             'code' => ['nullable', 'string', 'max:50', 'unique:projects,code'],
         ]);
 
@@ -149,9 +149,9 @@ class ProjectsController extends Controller
             'status' => ['required', 'in:draft,open,in_progress,closed,archived'],
             'min_team_size' => ['required', 'integer', 'min:1', 'max:20', 'lte:max_team_size'],
             'max_team_size' => ['required', 'integer', 'min:1', 'max:20', 'gte:min_team_size'],
-            'start_date' => ['nullable', 'date'],
-            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'deadline_at' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'start_date' => ['nullable', 'date', 'after_or_equal:today'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:today', 'after_or_equal:start_date'],
+            'deadline_at' => ['nullable', 'date', 'after_or_equal:now', 'after_or_equal:start_date'],
         ]);
 
         $classroomId = $validated['classroom_id'] ?? $project->classroom_id;

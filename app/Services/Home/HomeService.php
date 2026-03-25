@@ -14,7 +14,8 @@ class HomeService
     {
         $stats = $this->repo->getStats();
         $user = Auth::user();
-        $recentProjects = $user ? $this->repo->getRecentProjectsForUser($user->id, $user->role) : [];
+        $recentRole = $user && ($user->hasRole('profesor') || $user->isAdmin()) ? 'profesor' : (string) $user?->role;
+        $recentProjects = $user ? $this->repo->getRecentProjectsForUser($user->id, $recentRole) : [];
         $displayName = $user?->first_name ?: $user?->name ?: 'utilizator';
 
         $quickActions = [
@@ -22,6 +23,7 @@ class HomeService
             ['label' => 'Proiecte active', 'href' => '/projects'],
             ['label' => 'Echipe', 'href' => '/teams'],
             ['label' => 'Livrabile', 'href' => '/deliverables'],
+            ['label' => 'Catalog', 'href' => '/catalog'],
         ];
 
         if ($user && $user->hasRole('profesor')) {
@@ -46,6 +48,8 @@ class HomeService
     {
         $user = Auth::user();
         $recentProjects = $user ? $this->repo->getRecentProjectsForUser($user->id, $user->role) : [];
+        $courses = $user ? $this->repo->getStudentCourses($user->id) : [];
+        $calendarEvents = $user ? $this->repo->getStudentCalendarEvents($user->id) : [];
         $displayName = $user?->first_name ?: $user?->name ?: 'utilizator';
 
         return [
@@ -57,11 +61,14 @@ class HomeService
                 'Consulta feedback-ul primit la predari.',
             ],
             'recent_projects' => $this->normalizeProjects($recentProjects),
+            'courses' => $this->normalizeCourses($courses),
+            'calendar_events' => $this->normalizeCalendarEvents($calendarEvents),
             'actions' => [
                 ['label' => 'Classroom-urile mele', 'href' => '/classrooms'],
                 ['label' => 'Proiectele mele', 'href' => '/projects'],
                 ['label' => 'Echipa mea', 'href' => '/teams'],
                 ['label' => 'Predari si livrabile', 'href' => '/deliverables'],
+                ['label' => 'Catalog', 'href' => '/catalog'],
             ],
         ];
     }
@@ -94,5 +101,44 @@ class HomeService
         } catch (\Throwable $exception) {
             return (string) $value;
         }
+    }
+
+    private function normalizeCourses(array $rows): array
+    {
+        $normalized = [];
+
+        foreach ($rows as $row) {
+            $fullName = trim(((string) ($row->professor_first_name ?? '')) . ' ' . ((string) ($row->professor_last_name ?? '')));
+
+            $normalized[] = [
+                'id' => $row->id ?? null,
+                'name' => $row->name ?? 'Classroom',
+                'subject' => $row->subject ?? '-',
+                'code' => $row->code ?? '-',
+                'is_active' => (bool) ($row->is_active ?? true),
+                'professor_name' => $fullName !== '' ? $fullName : '-',
+            ];
+        }
+
+        return $normalized;
+    }
+
+    private function normalizeCalendarEvents(array $rows): array
+    {
+        $normalized = [];
+
+        foreach ($rows as $row) {
+            $eventType = (string) ($row->event_type ?? '');
+            $normalized[] = [
+                'event_type' => $eventType,
+                'event_title' => $row->event_title ?? '-',
+                'subject' => $row->subject ?? '-',
+                'classroom_name' => $row->classroom_name ?? '-',
+                'event_at' => $this->formatDateTime($row->event_at ?? null),
+                'tag' => $eventType === 'deliverable_due' ? 'Livrabil' : 'Deadline proiect',
+            ];
+        }
+
+        return $normalized;
     }
 }

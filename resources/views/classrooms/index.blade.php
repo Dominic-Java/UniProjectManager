@@ -27,6 +27,7 @@
                     <tr>
                         <th>Clasa</th>
                         <th>Materie</th>
+                        <th>Profesor</th>
                         <th>Cod</th>
                         <th>Status</th>
                         <th>Membri</th>
@@ -39,6 +40,18 @@
                         <tr>
                             <td>{{ $classroom->name }}</td>
                             <td>{{ $classroom->subject }}</td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    @if(!empty($classroom->createdBy?->avatar_url))
+                                        <img src="{{ $classroom->createdBy->avatar_url }}" alt="{{ $classroom->createdBy->name }}" style="width:32px;height:32px;border-radius:999px;object-fit:cover;border:1px solid var(--line);">
+                                    @else
+                                        <div style="width:32px;height:32px;border-radius:999px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:800;">
+                                            {{ strtoupper(substr($classroom->createdBy?->first_name ?? $classroom->createdBy?->name ?? 'P', 0, 1)) }}
+                                        </div>
+                                    @endif
+                                    <span>{{ $classroom->createdBy?->name ?? '-' }}</span>
+                                </div>
+                            </td>
                             <td>{{ $classroom->code }}</td>
                             <td>{{ $classroom->is_active ? 'Activ' : 'Arhivat' }}</td>
                             <td>{{ $classroom->members_count }}</td>
@@ -55,7 +68,7 @@
 
         <div class="card span-4">
             <h3>Actiuni rapide</h3>
-            @if(auth()->user()?->hasRole('profesor'))
+            @if(auth()->user()?->hasRole('profesor') || auth()->user()?->isAdmin())
                 <p class="muted">Poti administra classroom-urile pe care le coordonezi.</p>
                 <a class="btn btn-primary" href="{{ route('classrooms.create') }}">Creeaza un classroom</a>
             @else
@@ -69,7 +82,7 @@
             @endif
         </div>
 
-        @if(auth()->user()?->hasRole('student'))
+        @if(auth()->user()?->hasRole('student') && !auth()->user()?->isAdmin())
             <div class="card span-12">
                 <h3>Invitatii primite</h3>
                 @if ($invitations->count() === 0)

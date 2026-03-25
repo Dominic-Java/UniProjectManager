@@ -8,6 +8,7 @@ use App\Services\Security\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
@@ -36,6 +37,8 @@ class ProfileController extends Controller
             'city' => ['nullable', 'string', 'max:120'],
             'county' => ['nullable', 'string', 'max:120'],
             'phone' => ['nullable', 'string', 'max:30'],
+            'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:2048'],
+            'remove_avatar' => ['nullable', 'boolean'],
         ]);
         if ($hasThemePreferenceColumn) {
             $validator->addRules([
@@ -66,6 +69,20 @@ class ProfileController extends Controller
         $validated = $validator->validate();
 
         $updates = $validated;
+        unset($updates['avatar'], $updates['remove_avatar']);
+
+        if ($request->boolean('remove_avatar')) {
+            $this->deleteStoredAvatar($user->avatar_url);
+            $updates['avatar_url'] = null;
+        }
+
+        if ($request->hasFile('avatar')) {
+            $this->deleteStoredAvatar($user->avatar_url);
+
+            $path = $request->file('avatar')->store('avatars/' . $user->id, 'public');
+            $updates['avatar_url'] = Storage::url($path);
+        }
+
         if (!$hasThemePreferenceColumn) {
             unset($updates['theme_preference']);
         }
@@ -125,5 +142,28 @@ class ProfileController extends Controller
         }
 
         return back()->with('success', 'Ti-am trimis pe email linkul pentru resetarea parolei.');
+    }
+
+    private function deleteStoredAvatar(?string $avatarUrl): void
+    {
+        $path = $this->storagePathFromAvatarUrl($avatarUrl);
+        if ($path && Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
+    }
+
+    private function storagePathFromAvatarUrl(?string $avatarUrl): ?string
+    {
+        if (!$avatarUrl) {
+            return null;
+        }
+
+        if (!str_starts_with($avatarUrl, '/storage/')) {
+            return null;
+        }
+
+        $path = ltrim(substr($avatarUrl, strlen('/storage/')), '/');
+
+        return $path !== '' ? $path : null;
     }
 }

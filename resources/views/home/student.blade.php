@@ -58,6 +58,36 @@
         border-color: #475569;
         background: rgba(15, 23, 42, 0.55);
     }
+    .calendar-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 10px;
+    }
+    .calendar-item {
+        border: 1px solid rgba(249, 115, 22, 0.2);
+        border-radius: 12px;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.5);
+    }
+    body[data-theme="dark"] .calendar-item {
+        border-color: #475569;
+        background: rgba(15, 23, 42, 0.6);
+    }
+    .calendar-tag {
+        display: inline-flex;
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        background: #ffedd5;
+        color: #9a3412;
+    }
+    body[data-theme="dark"] .calendar-tag {
+        background: #1f2937;
+        color: #f8fafc;
+    }
     @media (max-width: 900px) {
         .student-actions,
         .student-kpis { grid-template-columns: 1fr; }
@@ -110,10 +140,58 @@
                     <div style="margin-top:4px;font-weight:700;">Verifica deadline-urile apropiate</div>
                 </div>
                 <div class="student-kpi">
-                    <div class="muted">Recomandare</div>
-                    <div style="margin-top:4px;font-weight:700;">Pastreaza sincronizarea cu echipa ta</div>
+                    <div class="muted">Cursuri inscrise</div>
+                    <div style="margin-top:4px;font-weight:700;">{{ count($courses) }}</div>
                 </div>
             </div>
+        </div>
+
+        <div class="card span-6">
+            <h3>Cursurile tale</h3>
+            @if(empty($courses))
+                <div class="notice">Nu esti inscris momentan in classroom-uri active.</div>
+            @else
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Materie</th>
+                        <th>Profesor</th>
+                        <th>Cod</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach($courses as $course)
+                        <tr>
+                            <td>{{ $course['subject'] }}<div class="muted">{{ $course['name'] }}</div></td>
+                            <td>{{ $course['professor_name'] }}</td>
+                            <td>{{ $course['code'] }}</td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            @endif
+        </div>
+
+        <div class="card span-6">
+            <h3>Calendar academic</h3>
+            @if(empty($calendar_events))
+                <div class="notice">Nu exista evenimente viitoare in calendar.</div>
+            @else
+                <ul class="calendar-list">
+                    @foreach($calendar_events as $event)
+                        <li class="calendar-item">
+                            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+                                <div>
+                                    <span class="calendar-tag">{{ $event['tag'] }}</span>
+                                    <div style="font-weight:700;margin-top:6px;">{{ $event['event_title'] }}</div>
+                                    <div class="muted">{{ $event['subject'] }} - {{ $event['classroom_name'] }}</div>
+                                </div>
+                                <div style="font-weight:700;white-space:nowrap;">{{ $event['event_at'] ?? '-' }}</div>
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
         </div>
 
         <div class="card span-12">

@@ -131,6 +131,16 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function classroomGrades(): HasMany
+    {
+        return $this->hasMany(ClassroomGrade::class, 'student_user_id');
+    }
+
+    public function gradesGiven(): HasMany
+    {
+        return $this->hasMany(ClassroomGrade::class, 'graded_by_user_id');
+    }
+
     public function teamsCreated()
     {
         return $this->hasMany(Team::class, 'created_by');

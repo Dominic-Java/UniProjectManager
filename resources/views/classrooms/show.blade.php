@@ -5,6 +5,19 @@
         <div class="pill">Classroom</div>
         <h1>{{ $classroom->name }}</h1>
         <p>{{ $classroom->subject }} - Cod de acces: <strong>{{ $classroom->code }}</strong></p>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
+            @if(!empty($classroom->createdBy?->avatar_url))
+                <img src="{{ $classroom->createdBy->avatar_url }}" alt="{{ $classroom->createdBy->name }}" style="width:42px;height:42px;border-radius:999px;object-fit:cover;border:1px solid var(--line);">
+            @else
+                <div style="width:42px;height:42px;border-radius:999px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:800;">
+                    {{ strtoupper(substr($classroom->createdBy?->first_name ?? $classroom->createdBy?->name ?? 'P', 0, 1)) }}
+                </div>
+            @endif
+            <div>
+                <div style="font-weight:700;">{{ $classroom->createdBy?->name ?? '-' }}</div>
+                <div class="muted">{{ $classroom->subject }}</div>
+            </div>
+        </div>
     </section>
 
     <section class="grid">
@@ -52,6 +65,9 @@
                 @if($can_manage && $classroom->is_active)
                     <a class="btn btn-primary" href="{{ route('projects.create', ['classroom' => $classroom->id]) }}">Creeaza proiect in classroom</a>
                 @endif
+                @if($can_manage)
+                    <a class="btn btn-secondary" href="{{ route('catalog.index', ['classroom_id' => $classroom->id]) }}">Catalog si restante</a>
+                @endif
                 <a class="btn btn-secondary" href="{{ route('classrooms.index') }}">Revino la lista de classroom-uri</a>
 
                 @if($can_manage)
@@ -90,7 +106,18 @@
                     <tbody>
                     @foreach($classroom->members as $member)
                         <tr>
-                            <td>{{ $member->name }}</td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    @if(!empty($member->avatar_url))
+                                        <img src="{{ $member->avatar_url }}" alt="{{ $member->name }}" style="width:30px;height:30px;border-radius:999px;object-fit:cover;border:1px solid var(--line);">
+                                    @else
+                                        <div style="width:30px;height:30px;border-radius:999px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:700;">
+                                            {{ strtoupper(substr($member->first_name ?? $member->name, 0, 1)) }}
+                                        </div>
+                                    @endif
+                                    <span>{{ $member->name }}</span>
+                                </div>
+                            </td>
                             <td>{{ $member->email }}</td>
                             <td>{{ $member->pivot->role }}</td>
                         </tr>

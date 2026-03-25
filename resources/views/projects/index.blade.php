@@ -63,7 +63,7 @@
                                 <td>
                                     <div style="display:flex;gap:8px;flex-wrap:wrap;">
                                         <a class="btn btn-secondary" href="{{ route('projects.show', $project['id']) }}">Detalii</a>
-                                        @if(auth()->user()?->hasRole('profesor'))
+                                        @if(auth()->user()?->hasRole('profesor') || auth()->user()?->isAdmin())
                                             <a class="btn btn-secondary" href="{{ route('projects.edit', $project['id']) }}">Editeaza</a>
                                             <form method="POST" action="{{ route('projects.destroy', $project['id']) }}">
                                                 @csrf
@@ -120,7 +120,7 @@
                                 <td>
                                     <div style="display:flex;gap:8px;flex-wrap:wrap;">
                                         <a class="btn btn-secondary" href="{{ route('projects.show', $project['id']) }}">Detalii</a>
-                                        @if(auth()->user()?->hasRole('profesor'))
+                                        @if(auth()->user()?->hasRole('profesor') || auth()->user()?->isAdmin())
                                             <a class="btn btn-secondary" href="{{ route('projects.edit', $project['id']) }}">Editeaza</a>
                                             <form method="POST" action="{{ route('projects.destroy', $project['id']) }}">
                                                 @csrf
@@ -141,7 +141,7 @@
         <div class="card span-4">
             <h3>Actiuni</h3>
             <p class="muted">Configureaza mai intai classroom-urile, apoi proiectele asociate fiecarei clase.</p>
-            @if(auth()->user()?->hasRole('profesor'))
+            @if(auth()->user()?->hasRole('profesor') || auth()->user()?->isAdmin())
                 <div style="display:flex;flex-direction:column;gap:8px;">
                     <a class="btn btn-primary" href="{{ route('classrooms.index') }}">Acceseaza classroom-urile</a>
                     <a class="btn btn-secondary" href="{{ route('projects.create') }}">Creeaza un proiect</a>

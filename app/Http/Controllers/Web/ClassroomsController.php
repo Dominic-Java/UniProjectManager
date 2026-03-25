@@ -22,17 +22,23 @@ class ClassroomsController extends Controller
     {
         $user = $request->user();
 
-        if ($user->hasRole('profesor')) {
-            $classrooms = Classroom::query()
-                ->where('created_by', $user->id)
+        if ($user->hasRole('profesor') || $user->isAdmin()) {
+            $classroomsQuery = Classroom::query()
+                ->with('createdBy')
                 ->withCount(['members', 'projects'])
                 ->orderByDesc('is_active')
-                ->orderByDesc('created_at')
-                ->get();
+                ->orderByDesc('created_at');
+
+            if (!$user->isAdmin()) {
+                $classroomsQuery->where('created_by', $user->id);
+            }
+
+            $classrooms = $classroomsQuery->get();
 
             $invitations = collect();
         } else {
             $classrooms = Classroom::query()
+                ->with('createdBy')
                 ->whereHas('members', fn ($query) => $query->where('users.id', $user->id))
                 ->where('is_active', true)
                 ->withCount(['members', 'projects'])
@@ -56,7 +62,7 @@ class ClassroomsController extends Controller
 
     public function create(Request $request): View
     {
-        abort_unless($request->user()?->hasRole('profesor'), 403);
+        abort_unless($request->user()?->hasRole('profesor') || $request->user()?->isAdmin(), 403);
 
         return view('classrooms.create', [
             'title' => 'Creeaza classroom',
@@ -65,7 +71,7 @@ class ClassroomsController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless($request->user()?->hasRole('profesor'), 403);
+        abort_unless($request->user()?->hasRole('profesor') || $request->user()?->isAdmin(), 403);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:200'],

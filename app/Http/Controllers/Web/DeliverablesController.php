@@ -37,7 +37,7 @@ class DeliverablesController extends Controller
 
     public function create(): View
     {
-        abort_unless(auth()->user()?->hasRole('profesor'), 403);
+        abort_unless(auth()->user()?->hasRole('profesor') || auth()->user()?->isAdmin(), 403);
 
         return view('deliverables.create', [
             'title' => 'Creeaza livrabil',
@@ -59,14 +59,14 @@ class DeliverablesController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless($request->user()?->hasRole('profesor'), 403);
+        abort_unless($request->user()?->hasRole('profesor') || $request->user()?->isAdmin(), 403);
 
         $validated = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
             'milestone_id' => ['nullable', 'exists:milestones,id'],
             'title' => ['required', 'string', 'max:200'],
             'description' => ['nullable', 'string'],
-            'due_at' => ['nullable', 'date'],
+            'due_at' => ['nullable', 'date', 'after_or_equal:now'],
             'submission_type' => ['required', 'in:file,link,both'],
             'max_points' => ['required', 'numeric', 'min:0', 'max:9999'],
         ]);
@@ -318,7 +318,7 @@ class DeliverablesController extends Controller
 
     public function edit(Deliverable $deliverable): View|RedirectResponse
     {
-        abort_unless(auth()->user()?->hasRole('profesor'), 403);
+        abort_unless(auth()->user()?->hasRole('profesor') || auth()->user()?->isAdmin(), 403);
         abort_unless($deliverable->project && ClassroomAccess::canManageProject(auth()->user(), $deliverable->project), 403);
 
         $deliverable->loadMissing('project');
@@ -355,14 +355,14 @@ class DeliverablesController extends Controller
 
     public function update(Request $request, Deliverable $deliverable): RedirectResponse
     {
-        abort_unless($request->user()?->hasRole('profesor'), 403);
+        abort_unless($request->user()?->hasRole('profesor') || $request->user()?->isAdmin(), 403);
 
         $validated = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
             'milestone_id' => ['nullable', 'exists:milestones,id'],
             'title' => ['required', 'string', 'max:200'],
             'description' => ['nullable', 'string'],
-            'due_at' => ['nullable', 'date'],
+            'due_at' => ['nullable', 'date', 'after_or_equal:now'],
             'submission_type' => ['required', 'in:file,link,both'],
             'max_points' => ['required', 'numeric', 'min:0', 'max:9999'],
         ]);
@@ -399,7 +399,7 @@ class DeliverablesController extends Controller
 
     public function destroy(Deliverable $deliverable): RedirectResponse
     {
-        abort_unless(request()->user()?->hasRole('profesor'), 403);
+        abort_unless(request()->user()?->hasRole('profesor') || request()->user()?->isAdmin(), 403);
         abort_unless($deliverable->project && ClassroomAccess::canManageProject(request()->user(), $deliverable->project), 403);
 
         $deliverable->loadMissing('project');

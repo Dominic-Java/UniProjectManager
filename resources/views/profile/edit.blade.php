@@ -19,9 +19,29 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('profile.update') }}">
+            <form method="POST" action="{{ route('profile.update') }}" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
+
+                <div style="margin-bottom:12px;">
+                    <label class="label" for="avatar">Poza profil</label>
+                    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                        @if(!empty($user->avatar_url))
+                            <img src="{{ $user->avatar_url }}" alt="{{ $user->name }}" style="width:64px;height:64px;border-radius:999px;object-fit:cover;border:1px solid var(--line);">
+                        @else
+                            <div style="width:64px;height:64px;border-radius:999px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;">
+                                {{ strtoupper(substr($user->first_name ?? $user->name, 0, 1)) }}
+                            </div>
+                        @endif
+                        <div style="flex:1;min-width:240px;">
+                            <input class="input" id="avatar" type="file" name="avatar" accept=".jpg,.jpeg,.png,.webp,.gif">
+                            <label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13px;color:var(--muted);">
+                                <input type="checkbox" name="remove_avatar" value="1">
+                                Elimina poza curenta
+                            </label>
+                        </div>
+                    </div>
+                </div>
 
                 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px;">
                     <div>
@@ -136,6 +156,9 @@
         <div class="card span-4">
             <h3>Cont</h3>
             <p class="muted">Aceste date definesc identificarea contului tau in platforma.</p>
+            @if(!empty($user->avatar_url))
+                <img src="{{ $user->avatar_url }}" alt="{{ $user->name }}" style="width:74px;height:74px;border-radius:999px;object-fit:cover;border:1px solid var(--line);margin-bottom:10px;">
+            @endif
             <div class="notice">{{ $user->email }}</div>
             <p class="muted" style="margin-top:10px;">ID utilizator</p>
             <div class="notice">{{ $user->member_code ?? '-' }}</div>

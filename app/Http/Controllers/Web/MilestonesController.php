@@ -28,7 +28,7 @@ class MilestonesController extends Controller
 
     public function create(): View
     {
-        abort_unless(auth()->user()?->hasRole('profesor'), 403);
+        abort_unless(auth()->user()?->hasRole('profesor') || auth()->user()?->isAdmin(), 403);
 
         return view('milestones.create', [
             'title' => 'Creeaza milestone',
@@ -43,13 +43,13 @@ class MilestonesController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless($request->user()?->hasRole('profesor'), 403);
+        abort_unless($request->user()?->hasRole('profesor') || $request->user()?->isAdmin(), 403);
 
         $validated = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
             'title' => ['required', 'string', 'max:200'],
             'description' => ['nullable', 'string'],
-            'due_at' => ['nullable', 'date'],
+            'due_at' => ['nullable', 'date', 'after_or_equal:now'],
             'weight' => ['required', 'numeric', 'min:0', 'max:999.99'],
         ]);
 
@@ -88,7 +88,7 @@ class MilestonesController extends Controller
 
     public function edit(Milestone $milestone): View|RedirectResponse
     {
-        abort_unless(auth()->user()?->hasRole('profesor'), 403);
+        abort_unless(auth()->user()?->hasRole('profesor') || auth()->user()?->isAdmin(), 403);
         abort_unless($milestone->project && ClassroomAccess::canManageProject(auth()->user(), $milestone->project), 403);
 
         $milestone->loadMissing('project');
@@ -116,13 +116,13 @@ class MilestonesController extends Controller
 
     public function update(Request $request, Milestone $milestone): RedirectResponse
     {
-        abort_unless($request->user()?->hasRole('profesor'), 403);
+        abort_unless($request->user()?->hasRole('profesor') || $request->user()?->isAdmin(), 403);
 
         $validated = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
             'title' => ['required', 'string', 'max:200'],
             'description' => ['nullable', 'string'],
-            'due_at' => ['nullable', 'date'],
+            'due_at' => ['nullable', 'date', 'after_or_equal:now'],
             'weight' => ['required', 'numeric', 'min:0', 'max:999.99'],
         ]);
 
@@ -142,7 +142,7 @@ class MilestonesController extends Controller
 
     public function destroy(Milestone $milestone): RedirectResponse
     {
-        abort_unless(request()->user()?->hasRole('profesor'), 403);
+        abort_unless(request()->user()?->hasRole('profesor') || request()->user()?->isAdmin(), 403);
         abort_unless($milestone->project && ClassroomAccess::canManageProject(request()->user(), $milestone->project), 403);
 
         $milestone->loadMissing('project');
