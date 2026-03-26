@@ -12,6 +12,7 @@ use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\ProjectMaterialsController;
 use App\Http\Controllers\Web\ClassroomsController;
 use App\Http\Controllers\Web\CatalogController;
+use App\Http\Controllers\Web\NotificationsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -44,6 +45,12 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:5,1')
         ->name('profile.password-reset-link');
     Route::post('/profile/theme-toggle', [ProfileController::class, 'toggleTheme'])->name('profile.theme.toggle');
+    Route::post('/notifications/{notification}/read', [NotificationsController::class, 'markAsRead'])
+        ->middleware('throttle:60,1')
+        ->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationsController::class, 'markAllAsRead'])
+        ->middleware('throttle:30,1')
+        ->name('notifications.read-all');
 
     Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog.index');
     Route::post('/catalog/classrooms/{classroom}/grades', [CatalogController::class, 'storeGrade'])
@@ -91,6 +98,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/projects/{project}/materials', [ProjectMaterialsController::class, 'store'])
         ->middleware('role:profesor')
         ->name('projects.materials.store');
+    Route::post('/projects/{project}/requirements', [ProjectsController::class, 'storeRequirement'])
+        ->middleware(['role:profesor', 'throttle:20,1'])
+        ->name('projects.requirements.store');
     Route::get('/project-materials/{material}/download', [ProjectMaterialsController::class, 'download'])
         ->name('projects.materials.download');
     Route::delete('/project-materials/{material}', [ProjectMaterialsController::class, 'destroy'])

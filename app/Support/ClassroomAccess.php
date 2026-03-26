@@ -116,10 +116,23 @@ class ClassroomAccess
         }
 
         if ($project->classroom_id) {
-            return DB::table('classroom_members')
+            $isMember = DB::table('classroom_members')
                 ->where('classroom_id', $project->classroom_id)
                 ->where('user_id', $user->id)
                 ->exists();
+
+            if (!$isMember) {
+                return false;
+            }
+
+            if (self::isRetakeProject($project)) {
+                return DB::table('project_target_students')
+                    ->where('project_id', $project->id)
+                    ->where('student_user_id', $user->id)
+                    ->exists();
+            }
+
+            return true;
         }
 
         return DB::table('team_members')
@@ -144,6 +157,20 @@ class ClassroomAccess
                 $classroomQuery
                     ->whereNotNull('classroom_id')
                     ->whereHas('classroom.members', fn (Builder $memberQuery) => $memberQuery->where('users.id', $user->id));
+
+                if (Schema::hasColumn('projects', 'is_retake_project') && Schema::hasTable('project_target_students')) {
+                    $classroomQuery->where(function (Builder $audienceQuery) use ($user): void {
+                        $audienceQuery
+                            ->where('is_retake_project', false)
+                            ->orWhereNull('is_retake_project')
+                            ->orWhereExists(function ($existsQuery) use ($user): void {
+                                $existsQuery->selectRaw('1')
+                                    ->from('project_target_students')
+                                    ->whereColumn('project_target_students.project_id', 'projects.id')
+                                    ->where('project_target_students.student_user_id', $user->id);
+                            });
+                    });
+                }
             })->orWhere(function (Builder $legacyQuery) use ($user): void {
                 $legacyQuery
                     ->whereNull('classroom_id')
@@ -210,5 +237,14 @@ class ClassroomAccess
             ->where('user_id', $user->id)
             ->where('role', 'teacher')
             ->exists();
+    }
+
+    private static function isRetakeProject(Project $project): bool
+    {
+        if (!Schema::hasColumn('projects', 'is_retake_project') || !Schema::hasTable('project_target_students')) {
+            return false;
+        }
+
+        return (bool) $project->is_retake_project;
     }
 }

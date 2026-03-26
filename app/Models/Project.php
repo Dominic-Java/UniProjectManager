@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 
 class Project extends Model
 {
@@ -21,6 +22,7 @@ class Project extends Model
         'classroom_id',
         'status',
         'visibility',
+        'is_retake_project',
         'max_team_size',
         'min_team_size',
         'start_date',
@@ -30,6 +32,7 @@ class Project extends Model
     ];
 
     protected $casts = [
+        'is_retake_project' => 'boolean',
         'start_date' => 'date',
         'end_date' => 'date',
         'deadline_at' => 'datetime',
@@ -78,6 +81,12 @@ class Project extends Model
             ->withPivot(['staff_role', 'created_at']);
     }
 
+    public function targetStudents(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'project_target_students', 'project_id', 'student_user_id')
+            ->withTimestamps();
+    }
+
     public function hasDeadlinePassed(?CarbonInterface $moment = null): bool
     {
         if (!$this->deadline_at) {
@@ -92,6 +101,15 @@ class Project extends Model
     public function isLocked(): bool
     {
         return in_array($this->status, ['closed', 'archived'], true) || $this->hasDeadlinePassed();
+    }
+
+    public function isRetakeProject(): bool
+    {
+        if (!Schema::hasColumn('projects', 'is_retake_project')) {
+            return false;
+        }
+
+        return (bool) $this->is_retake_project;
     }
 
     public function closeIfDeadlinePassed(?CarbonInterface $moment = null): bool

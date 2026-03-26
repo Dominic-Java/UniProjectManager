@@ -7,6 +7,8 @@ use App\Http\Middleware\CloseExpiredProjectsMiddleware;
 use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\SecurityHeadersMiddleware;
 use App\Http\Middleware\ForceHttpsMiddleware;
+use App\Http\Middleware\SetLocaleMiddleware;
+use App\Http\Middleware\TranslateRenderedHtmlMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -27,6 +29,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', CloseExpiredProjectsMiddleware::class);
         $middleware->appendToGroup('web', ForceHttpsMiddleware::class);
         $middleware->appendToGroup('web', SecurityHeadersMiddleware::class);
+        $middleware->appendToGroup('web', SetLocaleMiddleware::class);
+        $middleware->appendToGroup('web', TranslateRenderedHtmlMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

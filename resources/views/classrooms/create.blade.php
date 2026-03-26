@@ -27,6 +27,16 @@
                 </div>
 
                 <div style="margin-bottom:12px;">
+                    <label class="label" for="study_year">An de studiu</label>
+                    <select class="input" id="study_year" name="study_year">
+                        <option value="">-- optional --</option>
+                        @for($year = 1; $year <= 6; $year++)
+                            <option value="{{ $year }}" @selected((string) old('study_year') === (string) $year)>Anul {{ $year }}</option>
+                        @endfor
+                    </select>
+                </div>
+
+                <div style="margin-bottom:12px;">
                     <label class="label" for="description">Descriere (optional)</label>
                     <textarea class="input" id="description" name="description" rows="4" placeholder="Detalii pentru studenti">{{ old('description') }}</textarea>
                 </div>

@@ -60,6 +60,7 @@ class AuthController extends Controller
         $request->session()->regenerate();
 
         $updates = ['last_login_at' => now()];
+        $hasLocalePreferenceColumn = Schema::hasColumn('users', 'locale_preference');
         $cookieTheme = $this->resolveThemeFromRequest($request);
         if (
             Schema::hasColumn('users', 'theme_preference')
@@ -68,11 +69,26 @@ class AuthController extends Controller
         ) {
             $updates['theme_preference'] = $cookieTheme;
         }
+        $cookieLocale = $this->resolveLocaleFromRequest($request);
+        if (
+            $hasLocalePreferenceColumn
+            && $cookieLocale !== null
+            && ($user->locale_preference ?? 'ro') !== $cookieLocale
+        ) {
+            $updates['locale_preference'] = $cookieLocale;
+        }
 
         $user->update($updates);
         AuditLogger::log('auth.login', $user, 'user', $user->id);
 
-        return redirect()->intended(route('dashboard'));
+        $localeForCookie = $hasLocalePreferenceColumn
+            ? ($user->locale_preference ?? config('app.locale', 'ro'))
+            : ($cookieLocale ?? config('app.locale', 'ro'));
+        $secureCookie = $request->isSecure() || config('uniprojectmanager.force_https');
+
+        return redirect()
+            ->intended(route('dashboard'))
+            ->withCookie(cookie('upm_locale', $localeForCookie, 60 * 24 * 365, '/', null, $secureCookie, false, false, 'Lax'));
     }
 
     public function showRegister(): View
@@ -103,7 +119,8 @@ class AuthController extends Controller
                 ->withErrors(['email' => 'Exista deja un cont asociat acestei adrese de email.']);
         }
 
-        $user = User::create([
+        $hasLocalePreferenceColumn = Schema::hasColumn('users', 'locale_preference');
+        $userPayload = [
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
             'email' => $validated['email'],
@@ -111,7 +128,12 @@ class AuthController extends Controller
             'role' => $validated['role'],
             'member_code' => User::generateMemberCode($validated['role']),
             'theme_preference' => $this->resolveThemeFromRequest($request) ?? 'light',
-        ]);
+        ];
+        if ($hasLocalePreferenceColumn) {
+            $userPayload['locale_preference'] = $this->resolveLocaleFromRequest($request) ?? config('app.locale', 'ro');
+        }
+
+        $user = User::create($userPayload);
 
         $welcomeMailService->sendWelcomeMail($user);
 
@@ -119,7 +141,14 @@ class AuthController extends Controller
         $request->session()->regenerate();
         AuditLogger::log('auth.register', $user, 'user', $user->id, ['role' => $user->role]);
 
-        return redirect()->route('dashboard');
+        $secureCookie = $request->isSecure() || config('uniprojectmanager.force_https');
+        $localeForCookie = $hasLocalePreferenceColumn
+            ? ($user->locale_preference ?? config('app.locale', 'ro'))
+            : (config('app.locale', 'ro'));
+
+        return redirect()
+            ->route('dashboard')
+            ->withCookie(cookie('upm_locale', $localeForCookie, 60 * 24 * 365, '/', null, $secureCookie, false, false, 'Lax'));
     }
 
     public function logout(Request $request): RedirectResponse
@@ -295,5 +324,28 @@ class AuthController extends Controller
         $rawValue = trim($rawValue, "\"' ");
 
         return in_array($rawValue, ['light', 'dark'], true) ? $rawValue : null;
+    }
+
+    private function resolveLocaleFromRequest(Request $request): ?string
+    {
+        $fromCookieBag = strtolower(trim((string) $request->cookie('upm_locale', '')));
+        $fromCookieBag = trim($fromCookieBag, "\"' ");
+        if (in_array($fromCookieBag, ['ro', 'en'], true)) {
+            return $fromCookieBag;
+        }
+
+        $rawCookieHeader = (string) $request->server('HTTP_COOKIE', '');
+        if ($rawCookieHeader === '') {
+            return null;
+        }
+
+        if (!preg_match('/(?:^|;\\s*)upm_locale=([^;]+)/', $rawCookieHeader, $matches)) {
+            return null;
+        }
+
+        $rawValue = strtolower(urldecode(trim((string) ($matches[1] ?? ''))));
+        $rawValue = trim($rawValue, "\"' ");
+
+        return in_array($rawValue, ['ro', 'en'], true) ? $rawValue : null;
     }
 }

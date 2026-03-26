@@ -44,6 +44,10 @@
                     <td>{{ $classroom->subject }}</td>
                 </tr>
                 <tr>
+                    <th>An de studiu</th>
+                    <td>{{ $classroom->study_year ? 'Anul ' . $classroom->study_year : '-' }}</td>
+                </tr>
+                <tr>
                     <th>Cod classroom</th>
                     <td>{{ $classroom->code }}</td>
                 </tr>

@@ -69,7 +69,7 @@ final class HomeRepository
                         });
                 })
                 ->distinct()
-                ->orderByDesc('created_at')
+                ->orderByDesc('projects.created_at')
                 ->limit($limit)
                 ->get()
                 ->toArray();

@@ -2,15 +2,59 @@
 
 namespace App\Services\Catalog;
 
+use App\Mail\ClassroomGradeAssignedMail;
 use App\Mail\ClassroomFailingGradeWarningMail;
 use App\Mail\ClassroomRetakeDetailsMail;
 use App\Models\ClassroomGrade;
 use App\Models\User;
+use App\Services\Notifications\UserNotificationService;
 use App\Services\Security\AuditLogger;
 use Illuminate\Support\Facades\Mail;
 
 class ClassroomGradeNotificationService
 {
+    public function __construct(private readonly UserNotificationService $userNotificationService) {}
+
+    public function sendGradeAssigned(ClassroomGrade $grade, User $gradedBy, bool $isUpdate = false): bool
+    {
+        $grade->loadMissing(['student', 'classroom.createdBy', 'gradedBy']);
+
+        if (!$grade->student?->email) {
+            return false;
+        }
+
+        try {
+            Mail::to($grade->student->email)->send(new ClassroomGradeAssignedMail($grade, $gradedBy, $isUpdate));
+
+            $this->userNotificationService->notify(
+                (int) $grade->student_user_id,
+                $isUpdate ? 'Nota actualizata in catalog' : 'Nota noua in catalog',
+                ($grade->classroom?->subject ?? 'Materie') . ': ' . number_format((float) $grade->grade_value, 2),
+                route('catalog.index'),
+                'catalog.grade.assigned'
+            );
+
+            AuditLogger::log('catalog.grade_mail.sent', $gradedBy, 'classroom_grade', $grade->id, [
+                'student_user_id' => $grade->student_user_id,
+                'classroom_id' => $grade->classroom_id,
+                'is_update' => $isUpdate,
+            ]);
+
+            return true;
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            AuditLogger::log('catalog.grade_mail.failed', $gradedBy, 'classroom_grade', $grade->id, [
+                'student_user_id' => $grade->student_user_id,
+                'classroom_id' => $grade->classroom_id,
+                'is_update' => $isUpdate,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
     public function sendFailingWarning(ClassroomGrade $grade, ?User $triggeredBy = null, bool $force = false): bool
     {
         $grade->loadMissing(['student', 'classroom.createdBy', 'gradedBy']);
@@ -26,6 +70,14 @@ class ClassroomGradeNotificationService
         try {
             Mail::to($grade->student->email)->send(new ClassroomFailingGradeWarningMail($grade));
             $grade->forceFill(['last_warning_sent_at' => now()])->save();
+
+            $this->userNotificationService->notify(
+                (int) $grade->student_user_id,
+                'Avertizare restanta',
+                ($grade->classroom?->subject ?? 'Materie') . ': nota ' . number_format((float) $grade->grade_value, 2),
+                route('catalog.index'),
+                'catalog.grade.failing_warning'
+            );
 
             AuditLogger::log('catalog.warning_mail.sent', $triggeredBy, 'classroom_grade', $grade->id, [
                 'student_user_id' => $grade->student_user_id,
@@ -58,6 +110,14 @@ class ClassroomGradeNotificationService
 
         try {
             Mail::to($grade->student->email)->send(new ClassroomRetakeDetailsMail($grade, $professor, $details));
+
+            $this->userNotificationService->notify(
+                (int) $grade->student_user_id,
+                'Detalii restanta primite',
+                ($grade->classroom?->subject ?? 'Materie') . ' - verifica cerintele de recuperare',
+                route('catalog.index'),
+                'catalog.grade.retake_details'
+            );
 
             AuditLogger::log('catalog.retake_mail.sent', $professor, 'classroom_grade', $grade->id, [
                 'student_user_id' => $grade->student_user_id,
@@ -123,4 +183,3 @@ class ClassroomGradeNotificationService
         return $grade->last_warning_sent_at->lessThanOrEqualTo(now()->subDays($cooldownDays));
     }
 }
-

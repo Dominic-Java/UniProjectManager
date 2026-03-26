@@ -5,7 +5,7 @@
         <section class="hero">
             <div class="pill">Catalog</div>
             <h1>Situatie scolara pe materii</h1>
-            <p>Adauga notele studentilor, identifica restantele si trimite detalii de recuperare.</p>
+            <p>Filtreaza rapid classroom-urile, noteaza studentii si trimite detalii de recuperare pentru restante.</p>
         </section>
 
         <section class="grid">
@@ -20,18 +20,48 @@
                 @if($classrooms->count() === 0)
                     <div class="notice">Nu exista classroom-uri pe care sa le poti administra in catalog.</div>
                 @else
-                    <form method="GET" action="{{ route('catalog.index') }}" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
-                        <div style="min-width:320px;flex:1;">
-                            <label class="label" for="classroom_id">Classroom</label>
-                            <select class="input" id="classroom_id" name="classroom_id">
-                                @foreach($classrooms as $classroom)
-                                    <option value="{{ $classroom->id }}" @selected($selected_classroom && $selected_classroom->id === $classroom->id)>
-                                        {{ $classroom->name }} - {{ $classroom->subject }} ({{ $classroom->code }})
-                                    </option>
+                    <form method="GET" action="{{ route('catalog.index') }}" style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end;">
+                        <div style="grid-column:span 2;">
+                            <label class="label" for="subject">Filtru materie</label>
+                            <input class="input" id="subject" name="subject" type="text" value="{{ $filters['subject'] ?? '' }}" placeholder="Ex: Programare">
+                        </div>
+                        <div>
+                            <label class="label" for="study_year">An studiu</label>
+                            <select class="input" id="study_year" name="study_year">
+                                <option value="0">Toate</option>
+                                @foreach($available_study_years as $year)
+                                    <option value="{{ $year }}" @selected((int) ($filters['study_year'] ?? 0) === (int) $year)>Anul {{ $year }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <button class="btn btn-primary" type="submit">Afiseaza catalogul</button>
+                        <div>
+                            <label class="label" for="status">Status nota</label>
+                            <select class="input" id="status" name="status">
+                                <option value="all" @selected(($filters['status'] ?? 'all') === 'all')>Toate</option>
+                                <option value="failing" @selected(($filters['status'] ?? 'all') === 'failing')>Restanta</option>
+                                <option value="passed" @selected(($filters['status'] ?? 'all') === 'passed')>Promovat</option>
+                                <option value="ungraded" @selected(($filters['status'] ?? 'all') === 'ungraded')>Neevaluat</option>
+                            </select>
+                        </div>
+                        <div style="grid-column:span 2;">
+                            <label class="label" for="student_search">Cauta student</label>
+                            <input class="input" id="student_search" name="student_search" type="text" value="{{ $filters['student_search'] ?? '' }}" placeholder="Nume sau email">
+                        </div>
+                        <div style="grid-column:span 4;">
+                            <label class="label" for="classroom_id">Classroom</label>
+                            <select class="input" id="classroom_id" name="classroom_id" onchange="this.form.submit()">
+                                @foreach($classrooms as $classroom)
+                                    <option value="{{ $classroom->id }}" @selected($selected_classroom && $selected_classroom->id === $classroom->id)>
+                                        {{ $classroom->name }} - {{ $classroom->subject }}{{ $classroom->study_year ? ' (Anul ' . $classroom->study_year . ')' : '' }} ({{ $classroom->code }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="muted" style="margin-top:6px;">La schimbarea classroom-ului, catalogul se incarca automat.</p>
+                        </div>
+                        <div style="display:flex;gap:8px;justify-content:flex-end;grid-column:span 2;">
+                            <button class="btn btn-primary" type="submit">Aplica filtre</button>
+                            <a class="btn btn-secondary" href="{{ route('catalog.index') }}">Reseteaza</a>
+                        </div>
                     </form>
                 @endif
             </div>
@@ -43,10 +73,13 @@
                     </h3>
                     <p class="muted">
                         Profesor coordonator: {{ $selected_classroom->createdBy?->name ?? '-' }}
+                        @if($selected_classroom->study_year)
+                            - Anul {{ $selected_classroom->study_year }}
+                        @endif
                     </p>
 
                     @if($student_rows->count() === 0)
-                        <div class="notice">Nu exista studenti inscrisi in acest classroom.</div>
+                        <div class="notice">Nu exista studenti inscrisi in acest classroom pentru filtrele selectate.</div>
                     @else
                         <table class="table">
                             <thead>
@@ -119,7 +152,7 @@
                 <div class="card span-12">
                     <h3>Trimite email catre studentii restantieri</h3>
                     @if($failing_students->count() === 0)
-                        <div class="notice">Nu exista studenti restanti in acest classroom.</div>
+                        <div class="notice">Nu exista studenti restanti in acest classroom pentru filtrele selectate.</div>
                     @else
                         <form method="POST" action="{{ route('catalog.retake-emails.send', $selected_classroom) }}">
                             @csrf
@@ -150,7 +183,7 @@
                             <label class="label" for="details">Mesaj catre studenti (detalii restanta)</label>
                             <textarea class="input" id="details" name="details" rows="5" placeholder="Ex: Proiect nou pentru restanta, cerinte suplimentare, data sustinerii..." required>{{ old('details') }}</textarea>
 
-                            <div style="margin-top:10px;">
+                            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
                                 <button class="btn btn-primary" type="submit">Trimite email catre studentii selectati</button>
                             </div>
                         </form>
@@ -162,7 +195,7 @@
         <section class="hero">
             <div class="pill">Situatie scolara</div>
             <h1>Catalogul tau</h1>
-            <p>Vezi materiile, notele si profesorii pentru fiecare disciplina la care esti inscris.</p>
+            <p>Cauta materia, filtreaza dupa status/an si deschide direct classroom-ul pentru detalii.</p>
         </section>
 
         <section class="grid">
@@ -171,8 +204,37 @@
                     <div class="notice success" style="margin-bottom:12px;">{{ session('success') }}</div>
                 @endif
 
+                <form method="GET" action="{{ route('catalog.index') }}" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;align-items:end;margin-bottom:12px;">
+                    <div style="grid-column:span 2;">
+                        <label class="label" for="search">Cauta materie / profesor / classroom</label>
+                        <input class="input" id="search" name="search" type="text" value="{{ $filters['search'] ?? '' }}" placeholder="Ex: Programare Web">
+                    </div>
+                    <div>
+                        <label class="label" for="status">Status</label>
+                        <select class="input" id="status" name="status">
+                            <option value="all" @selected(($filters['status'] ?? 'all') === 'all')>Toate</option>
+                            <option value="failing" @selected(($filters['status'] ?? 'all') === 'failing')>Doar restante</option>
+                            <option value="passed" @selected(($filters['status'] ?? 'all') === 'passed')>Promovate</option>
+                            <option value="ungraded" @selected(($filters['status'] ?? 'all') === 'ungraded')>Neevaluate</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label" for="study_year">An studiu</label>
+                        <select class="input" id="study_year" name="study_year">
+                            <option value="0">Toti anii</option>
+                            @foreach($available_study_years as $year)
+                                <option value="{{ $year }}" @selected((int) ($filters['study_year'] ?? 0) === (int) $year)>Anul {{ $year }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div style="display:flex;gap:8px;justify-content:flex-end;">
+                        <button class="btn btn-primary" type="submit">Filtreaza</button>
+                        <a class="btn btn-secondary" href="{{ route('catalog.index') }}">Reseteaza</a>
+                    </div>
+                </form>
+
                 @if($records->count() === 0)
-                    <div class="notice">Nu ai inca discipline in catalog. Verifica daca esti inscris in classroom-uri.</div>
+                    <div class="notice">Nu ai rezultate in catalog pentru filtrele selectate.</div>
                 @else
                     @if($failing_count > 0)
                         <div class="notice error" style="margin-bottom:12px;">
@@ -186,17 +248,24 @@
                             <th>Materie</th>
                             <th>Classroom</th>
                             <th>Profesor</th>
+                            <th>An</th>
                             <th>Nota</th>
                             <th>Status</th>
                             <th>Feedback</th>
+                            <th>Detalii</th>
                         </tr>
                         </thead>
                         <tbody>
                         @foreach($records as $record)
                             <tr>
-                                <td>{{ $record['subject'] }}</td>
+                                <td>
+                                    <a href="{{ $record['details_url'] }}" style="font-weight:700;text-decoration:underline;">
+                                        {{ $record['subject'] }}
+                                    </a>
+                                </td>
                                 <td>{{ $record['classroom_name'] }}</td>
                                 <td>{{ $record['professor_name'] }}</td>
+                                <td>{{ $record['study_year'] ? 'Anul ' . $record['study_year'] : '-' }}</td>
                                 <td>
                                     @if($record['grade_value'] === null)
                                         -
@@ -214,6 +283,9 @@
                                     @endif
                                 </td>
                                 <td>{{ $record['feedback'] ?: '-' }}</td>
+                                <td>
+                                    <a class="btn btn-secondary btn-sm" href="{{ $record['details_url'] }}">Deschide materia</a>
+                                </td>
                             </tr>
                         @endforeach
                         </tbody>
@@ -223,4 +295,3 @@
         </section>
     @endif
 @endsection
-

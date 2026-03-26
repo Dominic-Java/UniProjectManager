@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Mail\NewProjectCreatedMail;
 use App\Mail\ProjectMaterialUploadedMail;
+use App\Mail\ProjectRequirementAddedMail;
 use App\Models\Classroom;
 use App\Models\Project;
 use App\Models\ProjectMaterial;
@@ -255,5 +256,197 @@ class ProjectNotificationAndMaterialTest extends TestCase
         Mail::assertNotSent(ProjectMaterialUploadedMail::class, function (ProjectMaterialUploadedMail $mail) use ($professor): bool {
             return $mail->hasTo($professor->email);
         });
+    }
+
+    public function test_retake_project_notifies_and_allows_access_only_for_failing_students(): void
+    {
+        Mail::fake();
+
+        $professor = User::factory()->create(['role' => 'profesor']);
+        $failingStudent = User::factory()->create(['role' => 'student']);
+        $passingStudent = User::factory()->create(['role' => 'student']);
+
+        $classroom = Classroom::create([
+            'code' => Classroom::generateCode(),
+            'name' => 'Clasa Restanta',
+            'subject' => 'Analiza',
+            'created_by' => $professor->id,
+            'is_active' => true,
+        ]);
+
+        DB::table('classroom_members')->insert([
+            [
+                'classroom_id' => $classroom->id,
+                'user_id' => $professor->id,
+                'role' => 'teacher',
+                'joined_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'classroom_id' => $classroom->id,
+                'user_id' => $failingStudent->id,
+                'role' => 'student',
+                'joined_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'classroom_id' => $classroom->id,
+                'user_id' => $passingStudent->id,
+                'role' => 'student',
+                'joined_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        DB::table('classroom_grades')->insert([
+            [
+                'classroom_id' => $classroom->id,
+                'student_user_id' => $failingStudent->id,
+                'graded_by_user_id' => $professor->id,
+                'grade_value' => 4.00,
+                'feedback' => null,
+                'last_warning_sent_at' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'classroom_id' => $classroom->id,
+                'student_user_id' => $passingStudent->id,
+                'graded_by_user_id' => $professor->id,
+                'grade_value' => 8.00,
+                'feedback' => null,
+                'last_warning_sent_at' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $this->actingAs($professor)
+            ->post(route('projects.store'), [
+                'classroom_id' => $classroom->id,
+                'title' => 'Proiect recuperare',
+                'description' => 'Doar pentru restantieri',
+                'visibility' => 'public',
+                'is_retake_project' => 1,
+                'status' => 'open',
+                'min_team_size' => 1,
+                'max_team_size' => 2,
+            ])
+            ->assertRedirect(route('projects.index'));
+
+        $project = Project::query()->where('title', 'Proiect recuperare')->first();
+        $this->assertNotNull($project);
+
+        $this->assertDatabaseHas('project_target_students', [
+            'project_id' => $project->id,
+            'student_user_id' => $failingStudent->id,
+        ]);
+        $this->assertDatabaseMissing('project_target_students', [
+            'project_id' => $project->id,
+            'student_user_id' => $passingStudent->id,
+        ]);
+
+        Mail::assertSent(NewProjectCreatedMail::class, function (NewProjectCreatedMail $mail) use ($failingStudent): bool {
+            return $mail->hasTo($failingStudent->email);
+        });
+        Mail::assertNotSent(NewProjectCreatedMail::class, function (NewProjectCreatedMail $mail) use ($passingStudent): bool {
+            return $mail->hasTo($passingStudent->email);
+        });
+
+        $this->actingAs($failingStudent)
+            ->get(route('projects.show', $project))
+            ->assertOk();
+        $this->actingAs($passingStudent)
+            ->get(route('projects.show', $project))
+            ->assertForbidden();
+    }
+
+    public function test_professor_can_add_project_requirement_and_send_email(): void
+    {
+        Mail::fake();
+
+        $professor = User::factory()->create(['role' => 'profesor']);
+        $student = User::factory()->create(['role' => 'student']);
+
+        $classroom = Classroom::create([
+            'code' => Classroom::generateCode(),
+            'name' => 'Clasa Cerinte',
+            'subject' => 'Programare Web',
+            'created_by' => $professor->id,
+            'is_active' => true,
+        ]);
+
+        DB::table('classroom_members')->insert([
+            [
+                'classroom_id' => $classroom->id,
+                'user_id' => $professor->id,
+                'role' => 'teacher',
+                'joined_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'classroom_id' => $classroom->id,
+                'user_id' => $student->id,
+                'role' => 'student',
+                'joined_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $project = Project::create([
+            'title' => 'Portal licenta',
+            'description' => 'Descriere proiect',
+            'domain' => 'Programare Web',
+            'classroom_id' => $classroom->id,
+            'status' => 'open',
+            'visibility' => 'public',
+            'min_team_size' => 1,
+            'max_team_size' => 5,
+            'created_by' => $professor->id,
+        ]);
+
+        $this->actingAs($professor)
+            ->post(route('projects.requirements.store', $project), [
+                'requirement_title' => 'Cerintele finale',
+                'requirement_description' => 'Implementati autentificare, dashboard si documentatie tehnica.',
+                'send_requirement_email' => 1,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('project_requirements', [
+            'project_id' => $project->id,
+            'title' => 'Cerintele finale',
+            'version' => 1,
+            'created_by' => $professor->id,
+        ]);
+
+        Mail::assertSent(ProjectRequirementAddedMail::class, function (ProjectRequirementAddedMail $mail) use ($student, $project): bool {
+            return $mail->hasTo($student->email) && $mail->project->id === $project->id;
+        });
+
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $student->id,
+            'type' => 'project.requirement.added',
+        ]);
+    }
+
+    public function test_english_locale_is_applied_globally_on_untranslated_pages(): void
+    {
+        $professor = User::factory()->create([
+            'role' => 'profesor',
+            'locale_preference' => 'en',
+        ]);
+
+        $this->actingAs($professor)
+            ->get(route('projects.index'))
+            ->assertOk()
+            ->assertSee('Platform projects')
+            ->assertSee('Create project');
     }
 }

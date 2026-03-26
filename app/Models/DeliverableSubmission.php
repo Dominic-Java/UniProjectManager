@@ -27,7 +27,9 @@ class DeliverableSubmission extends Model
 
     protected $casts = [
         'file_size_bytes' => 'integer',
+        'notes' => 'encrypted',
         'grade_points' => 'decimal:2',
+        'grade_feedback' => 'encrypted',
         'submitted_at' => 'datetime',
         'graded_at' => 'datetime',
         'created_at' => 'datetime',

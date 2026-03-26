@@ -389,6 +389,51 @@ class ClassroomFlowAndAccessTest extends TestCase
         Storage::disk('public')->assertExists($storedPath);
     }
 
+    public function test_student_professor_and_admin_can_change_language_from_profile(): void
+    {
+        config()->set('uniprojectmanager.admin_emails', ['admin@ulbs.ro']);
+
+        $users = [
+            User::factory()->create([
+                'role' => 'student',
+                'first_name' => 'Student',
+                'last_name' => 'User',
+                'locale_preference' => 'ro',
+            ]),
+            User::factory()->create([
+                'role' => 'profesor',
+                'first_name' => 'Profesor',
+                'last_name' => 'User',
+                'locale_preference' => 'ro',
+            ]),
+            User::factory()->create([
+                'role' => 'profesor',
+                'email' => 'admin@ulbs.ro',
+                'first_name' => 'Admin',
+                'last_name' => 'User',
+                'locale_preference' => 'ro',
+            ]),
+        ];
+
+        foreach ($users as $user) {
+            $this->actingAs($user)
+                ->put(route('profile.update'), [
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'locale_preference' => 'en',
+                ])
+                ->assertRedirect();
+
+            $this->assertSame('en', $user->fresh()->locale_preference);
+        }
+
+        $this->actingAs($users[0]->fresh())
+            ->get(route('profile.edit'))
+            ->assertOk()
+            ->assertSee('Language')
+            ->assertSee('Save changes');
+    }
+
     public function test_professor_sees_only_owned_classrooms_and_cannot_open_other_professor_classroom(): void
     {
         $ownerProfessor = User::factory()->create(['role' => 'profesor']);

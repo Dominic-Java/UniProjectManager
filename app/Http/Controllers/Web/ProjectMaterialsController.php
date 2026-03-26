@@ -22,7 +22,7 @@ class ProjectMaterialsController extends Controller
         ProjectNotificationService $projectNotificationService
     ): RedirectResponse
     {
-        abort_unless($request->user()?->hasRole('profesor'), 403);
+        abort_unless($request->user()?->hasRole('profesor') || $request->user()?->isAdmin(), 403);
         abort_unless(ClassroomAccess::canUploadClasswork($request->user(), $project), 403);
 
         if ($project->isLocked()) {
@@ -99,7 +99,7 @@ class ProjectMaterialsController extends Controller
 
     public function destroy(Request $request, ProjectMaterial $material): RedirectResponse
     {
-        abort_unless($request->user()?->hasRole('profesor'), 403);
+        abort_unless($request->user()?->hasRole('profesor') || $request->user()?->isAdmin(), 403);
 
         $material->loadMissing('project');
         abort_unless($material->project && ClassroomAccess::canUploadClasswork($request->user(), $material->project), 403);

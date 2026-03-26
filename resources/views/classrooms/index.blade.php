@@ -27,6 +27,7 @@
                     <tr>
                         <th>Clasa</th>
                         <th>Materie</th>
+                        <th>An</th>
                         <th>Profesor</th>
                         <th>Cod</th>
                         <th>Status</th>
@@ -40,6 +41,7 @@
                         <tr>
                             <td>{{ $classroom->name }}</td>
                             <td>{{ $classroom->subject }}</td>
+                            <td>{{ $classroom->study_year ? 'Anul ' . $classroom->study_year : '-' }}</td>
                             <td>
                                 <div style="display:flex;align-items:center;gap:8px;">
                                     @if(!empty($classroom->createdBy?->avatar_url))

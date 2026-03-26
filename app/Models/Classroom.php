@@ -16,12 +16,14 @@ class Classroom extends Model
         'code',
         'name',
         'subject',
+        'study_year',
         'description',
         'created_by',
         'is_active',
     ];
 
     protected $casts = [
+        'study_year' => 'integer',
         'is_active' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

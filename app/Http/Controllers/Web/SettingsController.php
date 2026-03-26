@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rules\Password;
 
 class SettingsController extends Controller
@@ -39,7 +40,7 @@ class SettingsController extends Controller
 
         $validated['email'] = strtolower($validated['email']);
 
-        $user = User::create([
+        $payload = [
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
             'email' => $validated['email'],
@@ -47,7 +48,12 @@ class SettingsController extends Controller
             'role' => $validated['role'],
             'member_code' => User::generateMemberCode($validated['role']),
             'is_active' => true,
-        ]);
+        ];
+        if (Schema::hasColumn('users', 'locale_preference')) {
+            $payload['locale_preference'] = config('app.locale', 'ro');
+        }
+
+        $user = User::create($payload);
 
         $welcomeMailService->sendWelcomeMail($user, $request->user());
 

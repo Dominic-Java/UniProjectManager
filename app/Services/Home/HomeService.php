@@ -16,30 +16,30 @@ class HomeService
         $user = Auth::user();
         $recentRole = $user && ($user->hasRole('profesor') || $user->isAdmin()) ? 'profesor' : (string) $user?->role;
         $recentProjects = $user ? $this->repo->getRecentProjectsForUser($user->id, $recentRole) : [];
-        $displayName = $user?->first_name ?: $user?->name ?: 'utilizator';
+        $displayName = $user?->first_name ?: $user?->name ?: __('ui.home.fallback_user');
 
         $quickActions = [
-            ['label' => 'Classroom-urile mele', 'href' => '/classrooms'],
-            ['label' => 'Proiecte active', 'href' => '/projects'],
-            ['label' => 'Echipe', 'href' => '/teams'],
-            ['label' => 'Livrabile', 'href' => '/deliverables'],
-            ['label' => 'Catalog', 'href' => '/catalog'],
+            ['label' => __('ui.home.teacher.quick_actions.my_classrooms'), 'href' => '/classrooms'],
+            ['label' => __('ui.home.teacher.quick_actions.active_projects'), 'href' => '/projects'],
+            ['label' => __('ui.home.teacher.quick_actions.teams'), 'href' => '/teams'],
+            ['label' => __('ui.home.teacher.quick_actions.deliverables'), 'href' => '/deliverables'],
+            ['label' => __('ui.home.teacher.quick_actions.catalog'), 'href' => '/catalog'],
         ];
 
         if ($user && $user->hasRole('profesor')) {
-            array_unshift($quickActions, ['label' => 'Creeaza un classroom', 'href' => '/classrooms/create']);
+            array_unshift($quickActions, ['label' => __('ui.home.teacher.quick_actions.create_classroom'), 'href' => '/classrooms/create']);
         }
 
         return [
-            'title' => 'UniProjectManager',
-            'subtitle' => 'Bine ai revenit, ' . $displayName . '.',
+            'title' => __('ui.home.teacher.title'),
+            'subtitle' => __('ui.home.teacher.subtitle', ['name' => $displayName]),
             'quick_actions' => $quickActions,
             'stats' => $stats,
             'recent_projects' => $this->normalizeProjects($recentProjects),
             'announcements' => [
-                'Planifica proiectele noi pentru clasele active.',
-                'Revizuieste echipele si invitatiile in asteptare.',
-                'Verifica livrabilele care se apropie de termen.',
+                __('ui.home.teacher.announcements.plan_projects'),
+                __('ui.home.teacher.announcements.review_teams'),
+                __('ui.home.teacher.announcements.check_deliverables'),
             ],
         ];
     }
@@ -50,25 +50,25 @@ class HomeService
         $recentProjects = $user ? $this->repo->getRecentProjectsForUser($user->id, $user->role) : [];
         $courses = $user ? $this->repo->getStudentCourses($user->id) : [];
         $calendarEvents = $user ? $this->repo->getStudentCalendarEvents($user->id) : [];
-        $displayName = $user?->first_name ?: $user?->name ?: 'utilizator';
+        $displayName = $user?->first_name ?: $user?->name ?: __('ui.home.fallback_user');
 
         return [
-            'title' => 'Panou student',
-            'subtitle' => 'Bine ai revenit, ' . $displayName . '.',
+            'title' => __('ui.home.student.title'),
+            'subtitle' => __('ui.home.student.subtitle', ['name' => $displayName]),
             'highlights' => [
-                'Urmareste livrabilele cu termen apropiat.',
-                'Ramai conectat la activitatea echipei tale.',
-                'Consulta feedback-ul primit la predari.',
+                __('ui.home.student.highlights.track_deliverables'),
+                __('ui.home.student.highlights.stay_connected'),
+                __('ui.home.student.highlights.check_feedback'),
             ],
             'recent_projects' => $this->normalizeProjects($recentProjects),
             'courses' => $this->normalizeCourses($courses),
             'calendar_events' => $this->normalizeCalendarEvents($calendarEvents),
             'actions' => [
-                ['label' => 'Classroom-urile mele', 'href' => '/classrooms'],
-                ['label' => 'Proiectele mele', 'href' => '/projects'],
-                ['label' => 'Echipa mea', 'href' => '/teams'],
-                ['label' => 'Predari si livrabile', 'href' => '/deliverables'],
-                ['label' => 'Catalog', 'href' => '/catalog'],
+                ['label' => __('ui.home.student.actions.my_classrooms'), 'href' => '/classrooms'],
+                ['label' => __('ui.home.student.actions.my_projects'), 'href' => '/projects'],
+                ['label' => __('ui.home.student.actions.my_team'), 'href' => '/teams'],
+                ['label' => __('ui.home.student.actions.submissions_and_deliverables'), 'href' => '/deliverables'],
+                ['label' => __('ui.home.student.actions.catalog'), 'href' => '/catalog'],
             ],
         ];
     }
@@ -80,7 +80,7 @@ class HomeService
         foreach ($rows as $row) {
             $normalized[] = [
                 'id' => $row->id ?? null,
-                'title' => $row->title ?? 'Proiect',
+                'title' => $row->title ?? __('ui.home.common.project_default'),
                 'subject' => $row->domain ?? '-',
                 'status' => $row->status ?? '-',
                 'deadline_at' => $this->formatDateTime($row->deadline_at ?? null),
@@ -112,7 +112,7 @@ class HomeService
 
             $normalized[] = [
                 'id' => $row->id ?? null,
-                'name' => $row->name ?? 'Classroom',
+                'name' => $row->name ?? __('ui.home.common.classroom_default'),
                 'subject' => $row->subject ?? '-',
                 'code' => $row->code ?? '-',
                 'is_active' => (bool) ($row->is_active ?? true),
@@ -135,7 +135,9 @@ class HomeService
                 'subject' => $row->subject ?? '-',
                 'classroom_name' => $row->classroom_name ?? '-',
                 'event_at' => $this->formatDateTime($row->event_at ?? null),
-                'tag' => $eventType === 'deliverable_due' ? 'Livrabil' : 'Deadline proiect',
+                'tag' => $eventType === 'deliverable_due'
+                    ? __('ui.home.common.deliverable_tag')
+                    : __('ui.home.common.project_deadline_tag'),
             ];
         }
 

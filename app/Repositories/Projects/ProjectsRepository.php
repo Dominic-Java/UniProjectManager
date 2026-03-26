@@ -28,6 +28,7 @@ final class ProjectsRepository
             'domain',
             'status',
             'visibility',
+            'is_retake_project',
             'min_team_size',
             'max_team_size',
             'start_date',

@@ -25,6 +25,7 @@ class User extends Authenticatable
         'role',
         'member_code',
         'theme_preference',
+        'locale_preference',
         'password_hash',
         'first_name',
         'last_name',
@@ -139,6 +140,11 @@ class User extends Authenticatable
     public function gradesGiven(): HasMany
     {
         return $this->hasMany(ClassroomGrade::class, 'graded_by_user_id');
+    }
+
+    public function userNotifications(): HasMany
+    {
+        return $this->hasMany(UserNotification::class, 'user_id');
     }
 
     public function teamsCreated()

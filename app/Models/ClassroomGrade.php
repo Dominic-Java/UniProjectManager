@@ -20,6 +20,7 @@ class ClassroomGrade extends Model
 
     protected $casts = [
         'grade_value' => 'decimal:2',
+        'feedback' => 'encrypted',
         'last_warning_sent_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -45,4 +46,3 @@ class ClassroomGrade extends Model
         return (float) $this->grade_value < 5.0;
     }
 }
-

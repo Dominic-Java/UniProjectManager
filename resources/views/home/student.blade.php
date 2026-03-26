@@ -97,21 +97,21 @@
 
 @section('content')
     <section class="hero">
-        <div class="pill">Student</div>
+        <div class="pill">{{ __('ui.home.student.pill') }}</div>
         <h1>{{ $subtitle }}</h1>
-        <p>Aici gasesti activitatea ta curenta: proiecte, echipa si livrabilele care urmeaza.</p>
+        <p>{{ __('ui.home.student.hero_description') }}</p>
     </section>
 
     <section class="grid home-grid">
         <div class="card span-12 student-highlight">
-            <h3>Actiuni rapide</h3>
-            <p class="muted">Acceseaza direct sectiunile folosite cel mai des.</p>
+            <h3>{{ __('ui.home.student.quick_actions.title') }}</h3>
+            <p class="muted">{{ __('ui.home.student.quick_actions.description') }}</p>
             <div class="student-actions">
                 @foreach($actions as $a)
                     <div class="student-action">
                         <strong>{{ $a['label'] }}</strong>
                         <div style="margin-top:10px;">
-                            <a class="btn btn-primary" href="{{ $a['href'] }}">Acceseaza</a>
+                            <a class="btn btn-primary" href="{{ $a['href'] }}">{{ __('ui.home.student.quick_actions.open') }}</a>
                         </div>
                     </div>
                 @endforeach
@@ -119,44 +119,44 @@
         </div>
 
         <div class="card span-12">
-            <h3>Planul tau de lucru</h3>
+            <h3>{{ __('ui.home.student.work_plan.title') }}</h3>
             <ul>
                 @foreach($highlights as $item)
                     <li>{{ $item }}</li>
                 @endforeach
             </ul>
-            <p class="muted">Pastreaza ritmul echipei si verifica termenele importante in fiecare sesiune.</p>
+            <p class="muted">{{ __('ui.home.student.work_plan.description') }}</p>
         </div>
 
         <div class="card span-12">
-            <h3>Rezumat rapid</h3>
+            <h3>{{ __('ui.home.student.summary.title') }}</h3>
             <div class="student-kpis">
                 <div class="student-kpi">
-                    <div class="muted">Proiecte vizibile</div>
+                    <div class="muted">{{ __('ui.home.student.summary.visible_projects') }}</div>
                     <div style="font-size:28px;font-weight:800;margin-top:4px;">{{ count($recent_projects) }}</div>
                 </div>
                 <div class="student-kpi">
-                    <div class="muted">Urmatorul pas</div>
-                    <div style="margin-top:4px;font-weight:700;">Verifica deadline-urile apropiate</div>
+                    <div class="muted">{{ __('ui.home.student.summary.next_step') }}</div>
+                    <div style="margin-top:4px;font-weight:700;">{{ __('ui.home.student.summary.check_deadlines') }}</div>
                 </div>
                 <div class="student-kpi">
-                    <div class="muted">Cursuri inscrise</div>
+                    <div class="muted">{{ __('ui.home.student.summary.enrolled_courses') }}</div>
                     <div style="margin-top:4px;font-weight:700;">{{ count($courses) }}</div>
                 </div>
             </div>
         </div>
 
         <div class="card span-6">
-            <h3>Cursurile tale</h3>
+            <h3>{{ __('ui.home.student.courses.title') }}</h3>
             @if(empty($courses))
-                <div class="notice">Nu esti inscris momentan in classroom-uri active.</div>
+                <div class="notice">{{ __('ui.home.student.courses.empty') }}</div>
             @else
                 <table class="table">
                     <thead>
                     <tr>
-                        <th>Materie</th>
-                        <th>Profesor</th>
-                        <th>Cod</th>
+                        <th>{{ __('ui.home.common.columns.subject') }}</th>
+                        <th>{{ __('ui.home.common.columns.professor') }}</th>
+                        <th>{{ __('ui.home.common.columns.code') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -173,9 +173,9 @@
         </div>
 
         <div class="card span-6">
-            <h3>Calendar academic</h3>
+            <h3>{{ __('ui.home.student.calendar.title') }}</h3>
             @if(empty($calendar_events))
-                <div class="notice">Nu exista evenimente viitoare in calendar.</div>
+                <div class="notice">{{ __('ui.home.student.calendar.empty') }}</div>
             @else
                 <ul class="calendar-list">
                     @foreach($calendar_events as $event)
@@ -195,17 +195,17 @@
         </div>
 
         <div class="card span-12">
-            <h3>Proiectele tale</h3>
+            <h3>{{ __('ui.home.student.projects.title') }}</h3>
             @if(empty($recent_projects))
-                <div class="notice">Nu ai proiecte active momentan. Verifica invitatiile primite in Classroom si Echipe.</div>
+                <div class="notice">{{ __('ui.home.student.projects.empty') }}</div>
             @else
                 <table class="table">
                     <thead>
                     <tr>
-                        <th>Proiect</th>
-                        <th>Materie</th>
-                        <th>Status</th>
-                        <th>Deadline</th>
+                        <th>{{ __('ui.home.common.columns.project') }}</th>
+                        <th>{{ __('ui.home.common.columns.subject') }}</th>
+                        <th>{{ __('ui.home.common.columns.status') }}</th>
+                        <th>{{ __('ui.home.common.columns.deadline') }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -223,9 +223,9 @@
         </div>
 
         <div class="card span-12 student-flow">
-            <strong>Flux recomandat pentru studenti:</strong>
+            <strong>{{ __('ui.home.student.recommended_flow.title') }}</strong>
             <div style="margin-top:8px;">
-                Intra in classroom -> colaboreaza cu echipa -> preda la timp -> urmareste feedback-ul.
+                {{ __('ui.home.student.recommended_flow.description') }}
             </div>
         </div>
     </section>

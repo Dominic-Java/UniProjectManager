@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\ClassroomGradeAssignedMail;
 use App\Mail\ClassroomFailingGradeWarningMail;
 use App\Mail\ClassroomRetakeDetailsMail;
 use App\Models\Classroom;
@@ -72,6 +73,33 @@ class CatalogAndReminderTest extends TestCase
         $this->assertNotNull($grade?->last_warning_sent_at);
     }
 
+    public function test_any_assigned_grade_sends_grade_email_and_notification(): void
+    {
+        Mail::fake();
+
+        $professor = User::factory()->create(['role' => 'profesor']);
+        $student = User::factory()->create(['role' => 'student']);
+        $classroom = $this->createClassroomWithMembers($professor, [$student], 'Matematica');
+
+        $this->actingAs($professor)
+            ->post(route('catalog.grades.store', $classroom), [
+                'student_user_id' => $student->id,
+                'grade_value' => 9.75,
+                'feedback' => 'Foarte bine.',
+            ])
+            ->assertRedirect();
+
+        Mail::assertSent(ClassroomGradeAssignedMail::class, function (ClassroomGradeAssignedMail $mail) use ($student): bool {
+            return $mail->hasTo($student->email) && !$mail->isUpdate;
+        });
+        Mail::assertNotSent(ClassroomFailingGradeWarningMail::class);
+
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $student->id,
+            'type' => 'catalog.grade.assigned',
+        ]);
+    }
+
     public function test_professor_can_send_manual_retake_details_only_to_failing_students(): void
     {
         Mail::fake();
@@ -129,6 +157,36 @@ class CatalogAndReminderTest extends TestCase
         Mail::assertSent(ClassroomFailingGradeWarningMail::class, 1);
     }
 
+    public function test_catalog_feedback_is_encrypted_at_rest(): void
+    {
+        $professor = User::factory()->create(['role' => 'profesor']);
+        $student = User::factory()->create(['role' => 'student']);
+        $classroom = $this->createClassroomWithMembers($professor, [$student], 'Criptografie');
+        $feedback = 'Mesaj privat pentru student.';
+
+        $this->actingAs($professor)
+            ->post(route('catalog.grades.store', $classroom), [
+                'student_user_id' => $student->id,
+                'grade_value' => 6.40,
+                'feedback' => $feedback,
+            ])
+            ->assertRedirect();
+
+        $storedRawFeedback = DB::table('classroom_grades')
+            ->where('classroom_id', $classroom->id)
+            ->where('student_user_id', $student->id)
+            ->value('feedback');
+
+        $grade = ClassroomGrade::query()
+            ->where('classroom_id', $classroom->id)
+            ->where('student_user_id', $student->id)
+            ->first();
+
+        $this->assertIsString($storedRawFeedback);
+        $this->assertNotSame($feedback, $storedRawFeedback);
+        $this->assertSame($feedback, $grade?->feedback);
+    }
+
     private function createClassroomWithMembers(User $professor, array $students, string $subject): Classroom
     {
         $classroom = Classroom::create([
@@ -164,4 +222,3 @@ class CatalogAndReminderTest extends TestCase
         return $classroom;
     }
 }
-

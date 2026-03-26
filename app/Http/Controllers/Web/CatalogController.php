@@ -12,6 +12,7 @@ use App\Support\ClassroomAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -28,7 +29,7 @@ class CatalogController extends Controller
         }
 
         if ($user->hasRole('student') && !$user->isAdmin()) {
-            return $this->studentIndex($user);
+            return $this->studentIndex($request, $user);
         }
 
         return $this->staffIndex($request, $user);
@@ -88,9 +89,14 @@ class CatalogController extends Controller
             $sentWarning = $this->notifications->sendFailingWarning($grade, $user, $sendWarningExplicitly);
         }
 
+        $gradeMailSent = $this->notifications->sendGradeAssigned($grade, $user, $previousGrade !== null);
+
         $successMessage = $previousGrade === null
             ? 'Nota a fost inregistrata in catalog.'
             : 'Nota a fost actualizata in catalog.';
+        if ($gradeMailSent) {
+            $successMessage .= ' Studentul a primit email cu nota.';
+        }
         if ($sentWarning) {
             $successMessage .= ' Studentul a fost notificat pe email pentru restanta.';
         }
@@ -166,6 +172,20 @@ class CatalogController extends Controller
 
     private function staffIndex(Request $request, User $user): View
     {
+        $subjectFilter = trim((string) $request->query('subject', ''));
+        $studyYearFilter = (int) $request->query('study_year', 0);
+        $studentSearch = trim((string) $request->query('student_search', ''));
+        $statusFilter = (string) $request->query('status', 'all');
+
+        $availableStudyYearsQuery = Classroom::query()->whereNotNull('study_year');
+        if (!$user->isAdmin()) {
+            $availableStudyYearsQuery->where('created_by', $user->id);
+        }
+        $availableStudyYears = $availableStudyYearsQuery
+            ->orderBy('study_year')
+            ->distinct()
+            ->pluck('study_year');
+
         $classroomsQuery = Classroom::query()
             ->with('createdBy')
             ->orderBy('subject')
@@ -173,6 +193,12 @@ class CatalogController extends Controller
 
         if (!$user->isAdmin()) {
             $classroomsQuery->where('created_by', $user->id);
+        }
+        if ($subjectFilter !== '') {
+            $classroomsQuery->where('subject', 'like', '%' . $subjectFilter . '%');
+        }
+        if ($studyYearFilter > 0) {
+            $classroomsQuery->where('study_year', $studyYearFilter);
         }
 
         $classrooms = $classroomsQuery->get();
@@ -187,6 +213,17 @@ class CatalogController extends Controller
 
             if ($selectedClassroom) {
                 $students = $this->buildStudentRowsForClassroom($selectedClassroom);
+                if ($studentSearch !== '') {
+                    $students = $students->filter(function (array $row) use ($studentSearch): bool {
+                        $needle = Str::lower($studentSearch);
+                        $name = Str::lower((string) ($row['student']->name ?? ''));
+                        $email = Str::lower((string) ($row['student']->email ?? ''));
+
+                        return Str::contains($name, $needle) || Str::contains($email, $needle);
+                    })->values();
+                }
+
+                $students = $this->filterRowsByStatus($students, $statusFilter);
                 $failingStudents = $students->where('is_failing', true)->values();
             }
         }
@@ -198,17 +235,33 @@ class CatalogController extends Controller
             'selected_classroom' => $selectedClassroom,
             'student_rows' => $students,
             'failing_students' => $failingStudents,
+            'filters' => [
+                'subject' => $subjectFilter,
+                'study_year' => $studyYearFilter,
+                'student_search' => $studentSearch,
+                'status' => $statusFilter,
+            ],
+            'available_study_years' => $availableStudyYears,
         ]);
     }
 
-    private function studentIndex(User $student): View
+    private function studentIndex(Request $request, User $student): View
     {
+        $search = trim((string) $request->query('search', ''));
+        $statusFilter = (string) $request->query('status', 'all');
+        $studyYearFilter = (int) $request->query('study_year', 0);
+
         $classrooms = Classroom::query()
             ->with('createdBy')
             ->whereHas('members', fn ($query) => $query->where('users.id', $student->id))
             ->orderBy('subject')
             ->orderBy('name')
             ->get();
+        if ($studyYearFilter > 0) {
+            $classrooms = $classrooms
+                ->where('study_year', $studyYearFilter)
+                ->values();
+        }
 
         $grades = ClassroomGrade::query()
             ->with(['gradedBy', 'classroom.createdBy'])
@@ -224,20 +277,45 @@ class CatalogController extends Controller
                 'classroom_id' => $classroom->id,
                 'classroom_name' => $classroom->name,
                 'subject' => $classroom->subject,
+                'study_year' => $classroom->study_year,
                 'professor_name' => $classroom->createdBy?->name ?? '-',
                 'grade_value' => $grade ? (float) $grade->grade_value : null,
                 'feedback' => $grade?->feedback,
                 'graded_at' => $grade?->updated_at,
                 'graded_by' => $grade?->gradedBy?->name,
                 'is_failing' => $grade ? $grade->isFailing() : false,
+                'details_url' => route('classrooms.show', $classroom),
             ];
         })->values();
+        if ($search !== '') {
+            $records = $records->filter(function (array $record) use ($search): bool {
+                $needle = Str::lower($search);
+
+                return Str::contains(Str::lower((string) $record['subject']), $needle)
+                    || Str::contains(Str::lower((string) $record['classroom_name']), $needle)
+                    || Str::contains(Str::lower((string) $record['professor_name']), $needle);
+            })->values();
+        }
+        $records = $this->filterRowsByStatus($records, $statusFilter);
+
+        $availableStudyYears = Classroom::query()
+            ->whereHas('members', fn ($query) => $query->where('users.id', $student->id))
+            ->whereNotNull('study_year')
+            ->orderBy('study_year')
+            ->distinct()
+            ->pluck('study_year');
 
         return view('catalog.index', [
             'title' => 'Situatie scolara',
             'mode' => 'student',
             'records' => $records,
             'failing_count' => $records->where('is_failing', true)->count(),
+            'filters' => [
+                'search' => $search,
+                'status' => $statusFilter,
+                'study_year' => $studyYearFilter,
+            ],
+            'available_study_years' => $availableStudyYears,
         ]);
     }
 
@@ -277,5 +355,14 @@ class CatalogController extends Controller
 
         abort_unless($isStaff && ClassroomAccess::canManageClassroom($user, $classroom), 403);
     }
-}
 
+    private function filterRowsByStatus(Collection $rows, string $statusFilter): Collection
+    {
+        return match ($statusFilter) {
+            'failing' => $rows->where('is_failing', true)->values(),
+            'passed' => $rows->filter(fn (array $row): bool => $row['grade_value'] !== null && !$row['is_failing'])->values(),
+            'ungraded' => $rows->where('grade_value', null)->values(),
+            default => $rows,
+        };
+    }
+}

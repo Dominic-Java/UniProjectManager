@@ -8,6 +8,7 @@ use App\Mail\ClassroomJoinedConfirmationMail;
 use App\Models\Classroom;
 use App\Models\ClassroomInvitation;
 use App\Models\User;
+use App\Services\Notifications\UserNotificationService;
 use App\Services\Security\AuditLogger;
 use App\Support\ClassroomAccess;
 use Illuminate\Http\RedirectResponse;
@@ -18,6 +19,8 @@ use Illuminate\View\View;
 
 class ClassroomsController extends Controller
 {
+    public function __construct(private readonly UserNotificationService $userNotificationService) {}
+
     public function index(Request $request): View
     {
         $user = $request->user();
@@ -26,6 +29,7 @@ class ClassroomsController extends Controller
             $classroomsQuery = Classroom::query()
                 ->with('createdBy')
                 ->withCount(['members', 'projects'])
+                ->orderBy('study_year')
                 ->orderByDesc('is_active')
                 ->orderByDesc('created_at');
 
@@ -42,6 +46,7 @@ class ClassroomsController extends Controller
                 ->whereHas('members', fn ($query) => $query->where('users.id', $user->id))
                 ->where('is_active', true)
                 ->withCount(['members', 'projects'])
+                ->orderBy('study_year')
                 ->orderByDesc('created_at')
                 ->get();
 
@@ -76,6 +81,7 @@ class ClassroomsController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:200'],
             'subject' => ['required', 'string', 'max:120'],
+            'study_year' => ['nullable', 'integer', 'min:1', 'max:6'],
             'description' => ['nullable', 'string'],
         ]);
 
@@ -84,6 +90,7 @@ class ClassroomsController extends Controller
                 'code' => Classroom::generateCode(),
                 'name' => trim($validated['name']),
                 'subject' => trim($validated['subject']),
+                'study_year' => $validated['study_year'] ?? null,
                 'description' => $validated['description'] ?? null,
                 'created_by' => $request->user()->id,
                 'is_active' => true,
@@ -255,6 +262,14 @@ class ClassroomsController extends Controller
                 $invitation->expires_at?->format('d.m.Y H:i')
             );
 
+            $this->userNotificationService->notify(
+                (int) $student->id,
+                'Invitatie classroom',
+                $classroom->subject . ' - ' . $classroom->name,
+                route('classrooms.index'),
+                'classroom.invitation.received'
+            );
+
             AuditLogger::log('classrooms.invitation.send', $request->user(), 'classroom', $classroom->id, [
                 'invitation_id' => $invitation->id,
                 'student_user_id' => $student->id,
@@ -337,6 +352,16 @@ class ClassroomsController extends Controller
             'status' => $status,
             'invitation_id' => $invitation->id,
         ]);
+
+        if ((int) $invitation->invited_by !== (int) $request->user()->id) {
+            $this->userNotificationService->notify(
+                (int) $invitation->invited_by,
+                'Raspuns invitatie classroom',
+                ($request->user()->name ?? 'Student') . ' a ' . ($status === 'accepted' ? 'acceptat' : 'respins') . ' invitatia pentru ' . ($invitation->classroom?->subject ?? 'materie'),
+                route('classrooms.show', $invitation->classroom_id),
+                'classroom.invitation.responded'
+            );
+        }
 
         return back()->with('success', 'Invitatia a fost ' . ($status === 'accepted' ? 'acceptata' : 'respinsa') . '.');
     }

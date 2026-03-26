@@ -68,6 +68,13 @@ class DeliverableSubmissionTest extends TestCase
 
         $this->assertNotNull($submission);
         Storage::disk('local')->assertExists($submission->file_path);
+
+        $storedRawNotes = DB::table('deliverable_submissions')
+            ->where('id', $submission->id)
+            ->value('notes');
+        $this->assertIsString($storedRawNotes);
+        $this->assertNotSame('Varianta finala.', $storedRawNotes);
+        $this->assertSame('Varianta finala.', $submission->notes);
     }
 
     public function test_student_cannot_upload_when_project_is_locked(): void

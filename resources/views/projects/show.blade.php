@@ -45,6 +45,10 @@
                     <td>{{ $project->status }}</td>
                 </tr>
                 <tr>
+                    <th>Tip proiect</th>
+                    <td>{{ $project->is_retake_project ? 'Restanta (audienta limitata)' : 'Standard' }}</td>
+                </tr>
+                <tr>
                     <th>Vizibilitate</th>
                     <td>{{ $project->visibility }}</td>
                 </tr>
@@ -178,14 +182,58 @@
 
         <div class="card span-6">
             <h3>Cerinte proiect</h3>
+            @if($can_manage)
+                @if($project->isLocked())
+                    <div class="notice error" style="margin-bottom:12px;">
+                        Proiectul este inchis dupa termen. Nu mai poti adauga cerinte noi.
+                    </div>
+                @else
+                    <form method="POST" action="{{ route('projects.requirements.store', $project) }}" style="margin-bottom:14px;">
+                        @csrf
+                        <div style="display:grid;gap:10px;">
+                            <div>
+                                <label class="label" for="requirement_title">Titlu cerinta</label>
+                                <input class="input" id="requirement_title" type="text" name="requirement_title" value="{{ old('requirement_title') }}" required>
+                            </div>
+                            <div>
+                                <label class="label" for="requirement_description">Mesaj / cerinte pentru studenti</label>
+                                <textarea class="input" id="requirement_description" name="requirement_description" rows="4" required>{{ old('requirement_description') }}</textarea>
+                            </div>
+                            <label style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);">
+                                <input type="checkbox" name="send_requirement_email" value="1">
+                                Trimite email automat catre studentii/profesorii care au acces la proiect
+                            </label>
+                            <div>
+                                <button type="submit" class="btn btn-primary btn-sm">Adauga cerinta</button>
+                            </div>
+                        </div>
+                    </form>
+                @endif
+            @endif
+
             @if($project->requirements->count() === 0)
                 <div class="notice">Nu exista cerinte inregistrate pentru acest proiect.</div>
             @else
-                <ul>
-                    @foreach($project->requirements->take(5) as $req)
-                        <li>{{ $req->title }} (v{{ $req->version }})</li>
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Versiune</th>
+                        <th>Titlu</th>
+                        <th>Descriere</th>
+                        <th>Creat de</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach($project->requirements->sortByDesc('version') as $req)
+                        <tr>
+                            <td>v{{ $req->version }}</td>
+                            <td>{{ $req->title }}</td>
+                            <td>{{ $req->description }}</td>
+                            <td>{{ $req->createdBy?->name ?? '-' }}</td>
+                        </tr>
                     @endforeach
-                </ul>
+                    </tbody>
+                </table>
             @endif
         </div>
 

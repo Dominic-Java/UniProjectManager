@@ -43,7 +43,12 @@
                         <tbody>
                         @foreach($active_projects as $project)
                             <tr>
-                                <td>{{ $project['title'] }}</td>
+                                <td>
+                                    {{ $project['title'] }}
+                                    @if(!empty($project['is_retake_project']))
+                                        <div class="muted" style="margin-top:4px;color:#b45309;font-weight:700;">Proiect restanta</div>
+                                    @endif
+                                </td>
                                 <td>
                                     @if(!empty($project['classroom']))
                                         {{ $project['classroom'] }}
@@ -100,7 +105,12 @@
                         <tbody>
                         @foreach($archived_projects as $project)
                             <tr>
-                                <td>{{ $project['title'] }}</td>
+                                <td>
+                                    {{ $project['title'] }}
+                                    @if(!empty($project['is_retake_project']))
+                                        <div class="muted" style="margin-top:4px;color:#b45309;font-weight:700;">Proiect restanta</div>
+                                    @endif
+                                </td>
                                 <td>
                                     @if(!empty($project['classroom']))
                                         {{ $project['classroom'] }}

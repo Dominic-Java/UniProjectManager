@@ -126,6 +126,14 @@
                     </div>
                 </div>
 
+                <div style="margin-top:12px;padding:12px;border:1px dashed var(--line);border-radius:12px;">
+                    <label style="display:flex;gap:8px;align-items:flex-start;font-weight:600;">
+                        <input type="checkbox" name="is_retake_project" value="1" @checked(old('is_retake_project'))>
+                        <span>Proiect dedicat pentru restante (vizibil doar studentilor cu nota sub 5 in aceasta materie)</span>
+                    </label>
+                    <p class="muted" style="margin-top:8px;">Cand este bifat, notificarile si accesul studentilor se limiteaza la cei restanti.</p>
+                </div>
+
                 <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
                     <button type="submit" class="btn btn-primary">Salveaza proiect</button>
                     <a href="{{ route('projects.index') }}" class="btn btn-secondary">Revino la lista proiectelor</a>

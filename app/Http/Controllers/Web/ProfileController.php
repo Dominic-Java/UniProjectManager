@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Services\Auth\PasswordResetService;
+use App\Services\Media\AvatarImageService;
 use App\Services\Security\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,8 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
+    public function __construct(private readonly AvatarImageService $avatarImageService) {}
+
     public function edit(Request $request): View
     {
         return view('profile.edit', [
@@ -26,6 +29,7 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         $hasThemePreferenceColumn = Schema::hasColumn('users', 'theme_preference');
+        $hasLocalePreferenceColumn = Schema::hasColumn('users', 'locale_preference');
 
         $validator = Validator::make($request->all(), [
             'first_name' => ['required', 'string', 'max:100'],
@@ -43,6 +47,11 @@ class ProfileController extends Controller
         if ($hasThemePreferenceColumn) {
             $validator->addRules([
                 'theme_preference' => ['nullable', 'in:light,dark'],
+            ]);
+        }
+        if ($hasLocalePreferenceColumn) {
+            $validator->addRules([
+                'locale_preference' => ['nullable', 'in:ro,en'],
             ]);
         }
 
@@ -79,12 +88,15 @@ class ProfileController extends Controller
         if ($request->hasFile('avatar')) {
             $this->deleteStoredAvatar($user->avatar_url);
 
-            $path = $request->file('avatar')->store('avatars/' . $user->id, 'public');
+            $path = $this->avatarImageService->storeResizedAvatar($request->file('avatar'), $user->id);
             $updates['avatar_url'] = Storage::url($path);
         }
 
         if (!$hasThemePreferenceColumn) {
             unset($updates['theme_preference']);
+        }
+        if (!$hasLocalePreferenceColumn) {
+            unset($updates['locale_preference']);
         }
 
         $user->update($updates);
@@ -97,11 +109,19 @@ class ProfileController extends Controller
                     ? ($user->theme_preference ?? 'light')
                     : (in_array((string) $request->cookie('upm_theme', 'light'), ['light', 'dark'], true) ? (string) $request->cookie('upm_theme', 'light') : 'light')
             );
+        $locale = in_array(($validated['locale_preference'] ?? ''), ['ro', 'en'], true)
+            ? $validated['locale_preference']
+            : (
+                $hasLocalePreferenceColumn
+                    ? ($user->locale_preference ?? config('app.locale', 'ro'))
+                    : (in_array((string) $request->cookie('upm_locale', config('app.locale', 'ro')), ['ro', 'en'], true) ? (string) $request->cookie('upm_locale', config('app.locale', 'ro')) : 'ro')
+            );
         $secureCookie = $request->isSecure() || config('uniprojectmanager.force_https');
 
         return back()
             ->withCookie(cookie('upm_theme', $theme, 60 * 24 * 365, '/', null, $secureCookie, false, false, 'Lax'))
-            ->with('success', 'Modificarile profilului au fost salvate.');
+            ->withCookie(cookie('upm_locale', $locale, 60 * 24 * 365, '/', null, $secureCookie, false, false, 'Lax'))
+            ->with('success', __('ui.profile.updated_success'));
     }
 
     public function toggleTheme(Request $request): RedirectResponse
@@ -126,7 +146,7 @@ class ProfileController extends Controller
 
         return back()
             ->withCookie(cookie('upm_theme', $nextTheme, 60 * 24 * 365, '/', null, $secureCookie, false, false, 'Lax'))
-            ->with('success', 'Tema interfetei a fost actualizata.');
+            ->with('success', __('ui.profile.theme_updated_success'));
     }
 
     public function sendPasswordResetLink(Request $request, PasswordResetService $passwordResetService): RedirectResponse
@@ -141,7 +161,7 @@ class ProfileController extends Controller
             return back()->withErrors(['profile' => 'Nu am putut trimite emailul de resetare. Verifica setarile SMTP si incearca din nou.']);
         }
 
-        return back()->with('success', 'Ti-am trimis pe email linkul pentru resetarea parolei.');
+        return back()->with('success', __('ui.profile.password_reset_sent'));
     }
 
     private function deleteStoredAvatar(?string $avatarUrl): void

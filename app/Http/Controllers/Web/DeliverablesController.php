@@ -9,6 +9,7 @@ use App\Models\DeliverableSubmission;
 use App\Models\Milestone;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\Notifications\UserNotificationService;
 use App\Services\Security\AuditLogger;
 use App\Support\ClassroomAccess;
 use Illuminate\Http\RedirectResponse;
@@ -22,6 +23,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DeliverablesController extends Controller
 {
+    public function __construct(private readonly UserNotificationService $userNotificationService) {}
+
     public function index(Request $request): View
     {
         $deliverables = Deliverable::with(['project', 'milestone'])
@@ -428,6 +431,16 @@ class DeliverablesController extends Controller
         try {
             Mail::to($submission->student->email)->send(
                 new DeliverableSubmissionGradedMail($submission, $gradedBy, $isUpdate)
+            );
+
+            $this->userNotificationService->notify(
+                (int) $submission->student_user_id,
+                $isUpdate ? 'Nota actualizata la livrabil' : 'Livrabil evaluat',
+                ($submission->deliverable?->title ?? 'Livrabil') . ': ' . number_format((float) $submission->grade_points, 2) . ' puncte',
+                $submission->deliverable
+                    ? route('deliverables.show', $submission->deliverable)
+                    : route('deliverables.index'),
+                'deliverable.submission.graded'
             );
 
             AuditLogger::log('deliverables.submission.grade_mail.sent', $gradedBy, 'deliverable_submission', $submission->id, [
